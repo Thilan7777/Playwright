@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Search - Input</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .window {
+            background: white;
+            width: 480px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .title-bar {
+            background: #0078d4;
+            color: white;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        .title-bar::before {
+            content: '🔍';
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 15px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        .hint {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        .examples {
+            background: #f8f8f8;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #555;
+        }
+        .examples strong {
+            color: #333;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Segoe UI', sans-serif;
+            transition: all 0.2s;
+        }
+        #submitBtn {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+        }
+        #submitBtn:hover {
+            background: #106ebe;
+        }
+        #submitBtn:disabled {
+            background: #ccc;
+            border-color: #ccc;
+            cursor: not-allowed;
+        }
+        #cancelBtn {
+            background: white;
+            color: #333;
+        }
+        #cancelBtn:hover {
+            background: #f0f0f0;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            display: none;
+        }
+        #status.show {
+            display: block;
+        }
+        #status.searching {
+            background: #fff4ce;
+            color: #8a6d3b;
+            border: 1px solid #faebcc;
+        }
+        #resultsSection {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 2px solid #e0e0e0;
+        }
+        .results-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0078d4;
+            margin-bottom: 15px;
+        }
+        .results-info {
+            background: #e7f4e4;
+            border: 1px solid #9ed492;
+            color: #2d6a25;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .results-table {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .results-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .results-table th {
+            background: #f0f0f0;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #d0d0d0;
+            position: sticky;
+            top: 0;
+        }
+        .results-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e0e0e0;
+            word-break: break-word;
+        }
+        .results-table tr:hover {
+            background: #f8f8f8;
+        }
+        .new-search-btn {
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .new-search-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="window">
+        <div class="title-bar">
+            Process Search - Enter Process Name
+        </div>
+        <div class="content">
+            <form id="searchForm">
+                <div class="form-group">
+                    <label for="processName">Process Name:</label>
+                    <input 
+                        type="text" 
+                        id="processName" 
+                        name="processName" 
+                        placeholder="Enter process name (e.g., chrome.exe)"
+                        autocomplete="off"
+                        autofocus
+                        required
+                    >
+                    <div class="hint">Enter the exact name of the process you want to search</div>
+                </div>
+                
+                <div class="examples">
+                    <strong>Examples:</strong>
+                    chrome.exe, EasyBiz.exe, notepad.exe, explorer.exe
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" id="cancelBtn">Cancel</button>
+                    <button type="submit" id="submitBtn">Search Process</button>
+                </div>
+                
+                <div id="status"></div>
+            </form>
+            
+            <div id="resultsSection" style="display: none;">
+                <div class="results-title">🎯 Search Results</div>
+                <div id="resultsInfo" class="results-info"></div>
+                <div id="resultsTable" class="results-table"></div>
+                <button id="newSearchBtn" class="new-search-btn">🔄 New Search</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('searchForm');
+        const input = document.getElementById('processName');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const status = document.getElementById('status');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const processName = input.value.trim();
+            if (!processName) {
+                alert('Please enter a process name');
+                return;
+            }
+
+            // Store the process name for Playwright to read
+            window.processName = processName;
+            document.title = 'SUBMITTED:' + processName;
+            
+            // Show status
+            status.className = 'show searching';
+            status.textContent = `🔄 Searching for ${processName}... Please wait.`;
+            
+            // Disable form
+            input.disabled = true;
+            submitBtn.disabled = true;
+            cancelBtn.disabled = true;
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            window.processName = 'CANCELLED';
+            document.title = 'CANCELLED';
+            window.close();
+        });
+
+        // Auto-focus input on load
+        window.onload = () => {
+            input.focus();
+        };
+
+        // Function to display results (called from Playwright)
+        window.displayResults = (results) => {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsInfo = document.getElementById('resultsInfo');
+            const resultsTable = document.getElementById('resultsTable');
+            const formElement = document.getElementById('searchForm');
+            
+            // Hide form, show results
+            formElement.style.display = 'none';
+            resultsSection.style.display = 'block';
+            
+            // Display info
+            resultsInfo.innerHTML = `Found <strong>${results.length}</strong> result(s) for process: <strong>${results.processName}</strong>`;
+            
+            // Build table
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Path</th>
+                            <th>Product Name</th>
+                            <th>Vendor</th>
+                            <th>Version</th>
+                            <th>Size</th>
+                            <th>MD5</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            results.data.forEach(row => {
+                tableHTML += `
+                    <tr>
+                        <td>${row.rowNum}</td>
+                        <td title="${row.path}">${row.path}</td>
+                        <td>${row.productName}</td>
+                        <td>${row.vendor}</td>
+                        <td>${row.version}</td>
+                        <td>${row.size}</td>
+                        <td title="${row.md5}">${row.md5}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+            resultsTable.innerHTML = tableHTML;
+        };
+
+        // New search button handler
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'newSearchBtn') {
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html>

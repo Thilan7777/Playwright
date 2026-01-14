@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+        }
+        .window {
+            background: white;
+            max-width: 1400px;
+            margin: 0 auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .title-bar {
+            background: #0078d4;
+            color: white;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+        }
+        .title-bar-left::before {
+            content: '📊';
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        .summary h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .summary-info {
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+        }
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .results-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+        .export-btn {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .export-btn:hover {
+            background: #218838;
+        }
+        .table-container {
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .table-scroll {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        th {
+            background: #f8f9fa;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #d0d0d0;
+            color: #333;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            word-break: break-word;
+        }
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        tbody tr:nth-child(even) {
+            background: #fafbfc;
+        }
+        tbody tr:nth-child(even):hover {
+            background: #f1f3f5;
+        }
+        .row-num {
+            width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #666;
+        }
+        .path-cell {
+            max-width: 350px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            color: #0066cc;
+        }
+        .md5-cell {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 11px;
+            color: #666;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Segoe UI', sans-serif;
+            transition: all 0.2s;
+        }
+        .action-btn.primary {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+        }
+        .action-btn.primary:hover {
+            background: #106ebe;
+        }
+        .action-btn.secondary {
+            background: white;
+            color: #333;
+        }
+        .action-btn.secondary:hover {
+            background: #f0f0f0;
+        }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+        .loading::before {
+            content: '⏳';
+            font-size: 48px;
+            display: block;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="window">
+        <div class="title-bar">
+            <div class="title-bar-left">
+                Process Search Results
+            </div>
+            <div id="timestamp"></div>
+        </div>
+        <div class="content">
+            <div id="loadingMessage" class="loading">
+                <div>Loading results...</div>
+            </div>
+            
+            <div id="resultsContent" style="display: none;">
+                <div class="summary">
+                    <h2 id="processTitle">🔍 Results for: <span id="processName"></span></h2>
+                    <div class="summary-info">
+                        <div class="summary-item">
+                            <strong>📦 Total Results:</strong>
+                            <span id="totalCount">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <strong>🕒 Search Time:</strong>
+                            <span id="searchTime">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="results-header">
+                    <div class="results-title">📋 File Path Details</div>
+                    <button class="export-btn" onclick="exportToCSV()">💾 Export to CSV</button>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th class="row-num">#</th>
+                                    <th>Path</th>
+                                    <th>Product Name</th>
+                                    <th>Vendor</th>
+                                    <th>Version</th>
+                                    <th>Size</th>
+                                    <th>MD5</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <button class="action-btn secondary" onclick="printResults()">🖨️ Print Results</button>
+                    <button class="action-btn primary" onclick="newSearch()">🔄 New Search</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let resultsData = null;
+
+        // Function called by Playwright to load results
+        window.loadResults = (data) => {
+            resultsData = data;
+            displayResults(data);
+        };
+
+        function displayResults(data) {
+            // Hide loading, show content
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('resultsContent').style.display = 'block';
+            
+            // Update summary
+            document.getElementById('processName').textContent = data.processName;
+            document.getElementById('totalCount').textContent = data.data.length;
+            document.getElementById('searchTime').textContent = data.searchTime || '-';
+            document.getElementById('timestamp').textContent = new Date().toLocaleString();
+            
+            // Build table rows
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            data.data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="row-num">${index + 1}</td>
+                    <td class="path-cell" title="${row.path}">${row.path}</td>
+                    <td title="${row.productName}">${row.productName}</td>
+                    <td>${row.vendor}</td>
+                    <td>${row.version}</td>
+                    <td>${row.size}</td>
+                    <td class="md5-cell" title="${row.md5}">${row.md5}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportToCSV() {
+            if (!resultsData) return;
+            
+            let csv = 'Row,Path,Product Name,Vendor,Version,Size,MD5\n';
+            
+            resultsData.data.forEach((row, index) => {
+                csv += `${index + 1},"${row.path}","${row.productName}","${row.vendor}","${row.version}","${row.size}","${row.md5}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${resultsData.processName}_results_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function printResults() {
+            window.print();
+        }
+
+        function newSearch() {
+            // Get the path to input-form.html
+            const currentPath = window.location.pathname;
+            const directoryPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+            const inputFormPath = directoryPath + '/input-form.html';
+            
+            // Navigate to input form
+            window.location.href = inputFormPath;
+        }
+    </script>
+</body>
+</html>
