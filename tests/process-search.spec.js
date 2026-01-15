@@ -29,10 +29,19 @@ test.describe('ProcessChecker Automation', () => {
       
       // Wait for user to submit the form (title changes to "SUBMITTED:processname")
       let processName = '';
-      await inputPage.waitForFunction(
-        () => document.title.startsWith('SUBMITTED:') || document.title === 'CANCELLED',
-        { timeout: 0 } // Infinite timeout for input
-      );
+      try {
+        await inputPage.waitForFunction(
+          () => document.title.startsWith('SUBMITTED:') || document.title === 'CANCELLED',
+          { timeout: 0 } // Infinite timeout for input
+        );
+      } catch (e) {
+        if (e.message.includes('Target page, context or browser has been closed')) {
+          console.log('👋 User closed the input page. Exiting...\n');
+          continueSearching = false;
+          break;
+        }
+        throw e;
+      }
       
       const title = await inputPage.title();
       

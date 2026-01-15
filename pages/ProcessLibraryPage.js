@@ -8,10 +8,17 @@ class ProcessLibraryPage {
     // The letters are links with URLs like file.php?start=S
     await this.page.locator(`a[href*="file.php?start=${letter.toUpperCase().trim()}"]`).click();
     
-    // Wait only for DOM content to load (faster than networkidle)
-    await this.page.waitForLoadState('domcontentloaded');
-    // Wait for table to be visible (parallel with load)
-    await this.page.waitForSelector('table', { timeout: 5000 });
+    // Wait for page to fully load
+    await this.page.waitForLoadState('load', { timeout: 10000 });
+    
+    // Wait for table to be visible
+    await this.page.waitForSelector('table', { timeout: 10000 });
+    
+    // Wait for actual table content (process links) to appear
+    await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 10000 });
+    
+    // Wait a bit for any loading overlays/dialogs to disappear
+    await this.page.waitForTimeout(1000);
   }
 
   async openProcess(processName) {
@@ -51,7 +58,7 @@ class ProcessLibraryPage {
 
         // Fast navigation - wait only for load event (faster than domcontentloaded)
         await Promise.all([
-          this.page.waitForLoadState('load', { timeout: 3000 }),
+          this.page.waitForLoadState('load', { timeout: 10000 }),
           nextButton.first().click()
         ]);
         pageNum++;
@@ -78,7 +85,7 @@ class ProcessLibraryPage {
           console.log('━'.repeat(60));
           // Fast navigation after clicking
           await Promise.all([
-            this.page.waitForLoadState('load', { timeout: 5000 }),
+            this.page.waitForLoadState('load', { timeout: 10000 }),
             processLinks.nth(i).click()
           ]);
           found = true;
@@ -98,7 +105,7 @@ class ProcessLibraryPage {
 
       // Fast navigation - parallel click and wait
       await Promise.all([
-        this.page.waitForLoadState('load', { timeout: 3000 }),
+        this.page.waitForLoadState('load', { timeout: 10000 }),
         nextButton.first().click()
       ]);
       pageNum++;
@@ -111,6 +118,23 @@ class ProcessLibraryPage {
     // Extract first and last process names from the table
     // Table structure: Row#, Path, Product Name, Vendor, Version, Size, MD5
     // Process names are in column 2 (nth-child(2))
+    
+    // Wait for table content to be available
+    try {
+      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 5000 });
+    } catch (e) {
+      // Debug: capture what's actually on the page
+      const pageContent = await this.page.content();
+      console.error('❌ Failed to find table content. Page HTML length:', pageContent.length);
+      
+      // Check if there's a loading dialog or overlay
+      const loadingElements = await this.page.locator('text=/searching|loading|please wait/i').count();
+      if (loadingElements > 0) {
+        console.error('⚠️  Found loading dialog/overlay on page');
+      }
+      
+      return { firstItem: null, lastItem: null };
+    }
     
     const processLinks = this.page.locator('table tr td:nth-child(2) a');
     const count = await processLinks.count();
