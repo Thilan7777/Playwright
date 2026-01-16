@@ -8,7 +8,7 @@ module.exports = defineConfig({
     headless: false,
     viewport: { width: 1280, height: 800 },
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    actionTimeout: 10000 // 10 seconds for each action
+    video: 'retain-on-failure'
+    // actionTimeout removed to allow infinite waits for user input
   },
 });

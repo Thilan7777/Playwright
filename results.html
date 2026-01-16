@@ -153,6 +153,36 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .copy-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .copy-btn {
+            background: #f0f0f0;
+            border: 1px solid #d0d0d0;
+            border-radius: 3px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 11px;
+            color: #666;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .copy-btn:hover {
+            background: #e0e0e0;
+            color: #333;
+            border-color: #b0b0b0;
+        }
+        .copy-btn:active {
+            background: #d0d0d0;
+            transform: scale(0.95);
+        }
+        .copy-btn.copied {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
         .actions {
             display: flex;
             gap: 10px;
@@ -284,14 +314,36 @@
             
             data.data.forEach((row, index) => {
                 const tr = document.createElement('tr');
+                
+                // Escape function to preserve backslashes and quotes
+                const escapeHtml = (str) => {
+                    const div = document.createElement('div');
+                    div.textContent = str;
+                    return div.innerHTML;
+                };
+                
+                const escapeForJs = (str) => {
+                    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+                };
+                
                 tr.innerHTML = `
                     <td class="row-num">${index + 1}</td>
-                    <td class="path-cell" title="${row.path}">${row.path}</td>
-                    <td title="${row.productName}">${row.productName}</td>
-                    <td>${row.vendor}</td>
-                    <td>${row.version}</td>
+                    <td class="path-cell" title="${escapeHtml(row.path)}">
+                        <div class="copy-container">
+                            <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(row.path)}</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${escapeForJs(row.path)}', this)" title="Copy path">📋</button>
+                        </div>
+                    </td>
+                    <td title="${escapeHtml(row.productName)}">
+                        <div class="copy-container">
+                            <span style="flex: 1; min-width: 0;">${escapeHtml(row.productName)}</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${escapeForJs(row.productName)}', this)" title="Copy product name">📋</button>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(row.vendor)}</td>
+                    <td>${escapeHtml(row.version)}</td>
                     <td>${row.size}</td>
-                    <td class="md5-cell" title="${row.md5}">${row.md5}</td>
+                    <td class="md5-cell" title="${escapeHtml(row.md5)}">${escapeHtml(row.md5)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -317,6 +369,23 @@
 
         function printResults() {
             window.print();
+        }
+
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                const originalText = button.textContent;
+                button.textContent = '✓';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
         }
 
         function newSearch() {
