@@ -52,9 +52,37 @@
             border-radius: 8px;
             margin-bottom: 25px;
         }
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
         .summary h2 {
             font-size: 24px;
-            margin-bottom: 10px;
+            margin: 0;
+        }
+        .new-search-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid white;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .new-search-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .new-search-btn:active {
+            transform: translateY(0);
         }
         .summary-info {
             display: flex;
@@ -242,7 +270,10 @@
             
             <div id="resultsContent" style="display: none;">
                 <div class="summary">
-                    <h2 id="processTitle">🔍 Results for: <span id="processName"></span></h2>
+                    <div class="summary-header">
+                        <h2 id="processTitle">🔍 Results for: <span id="processName"></span></h2>
+                        <button class="new-search-btn" onclick="newSearch()">🔄 New Search</button>
+                    </div>
                     <div class="summary-info">
                         <div class="summary-item">
                             <strong>📦 Total Results:</strong>
