@@ -516,17 +516,16 @@ class ProcessLibraryPage {
   }
 
   compareProcessNames(target, reference) {
-    // Custom comparison to match website's sorting:
+    // Custom comparison for process names:
     // - Strips special characters (dots, spaces, hyphens, etc.)
-    // - CASE-SENSITIVE comparison (uppercase comes before lowercase in ASCII)
-    // - This matches the website's actual sorting behavior
+    // - CASE-INSENSITIVE comparison
     
-    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
+    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     
     const strippedTarget = stripSpecial(target);
     const strippedReference = stripSpecial(reference);
     
-    // Case-sensitive comparison for sorting order
+    // Case-insensitive comparison
     if (strippedTarget < strippedReference) return -1;
     if (strippedTarget > strippedReference) return 1;
     return 0;
