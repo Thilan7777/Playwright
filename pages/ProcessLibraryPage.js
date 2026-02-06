@@ -9,16 +9,16 @@ class ProcessLibraryPage {
     await this.page.locator(`a[href*="file.php?start=${letter.toUpperCase().trim()}"]`).click();
     
     // Wait for page to fully load
-    await this.page.waitForLoadState('load', { timeout: 10000 });
+    await this.page.waitForLoadState('domcontentloaded', { timeout: 8000 });
     
     // Wait for table to be visible
-    await this.page.waitForSelector('table', { timeout: 10000 });
+    await this.page.waitForSelector('table', { timeout: 8000 });
     
     // Wait for actual table content (process links) to appear
-    await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 10000 });
+    await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
     
     // Wait a bit for any loading overlays/dialogs to disappear
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForTimeout(200);
     
     // Store the base URL for this letter (for direct page navigation)
     this.baseUrl = this.page.url();
@@ -29,13 +29,13 @@ class ProcessLibraryPage {
     const url = `${this.baseUrl}&page=${pageNum}`;
     
     try {
-      await this.page.goto(url, { waitUntil: 'load', timeout: 10000 });
+      await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 8000 });
       
       // Wait for table to load
-      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 10000 });
+      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
       
       // Small delay to ensure page is fully rendered
-      await this.page.waitForTimeout(300);
+      await this.page.waitForTimeout(50);
       
       return true; // Page loaded successfully
     } catch (e) {
@@ -84,8 +84,12 @@ class ProcessLibraryPage {
         
         const pageLoaded = await this.goToPage(currentPage);
         if (!pageLoaded) {
+          // Even the midpoint doesn't exist, try next page after last valid
           currentPage = lastValidPage + 1;
-          await this.goToPage(currentPage);
+          const retryLoaded = await this.goToPage(currentPage);
+          if (!retryLoaded) {
+            throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+          }
         }
         continue;
       }
@@ -139,7 +143,10 @@ class ProcessLibraryPage {
         const pageLoaded = await this.goToPage(currentPage);
         if (!pageLoaded) {
           currentPage = lastValidPage + 1;
-          await this.goToPage(currentPage);
+          const retryLoaded = await this.goToPage(currentPage);
+          if (!retryLoaded) {
+            throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+          }
         }
         continue;
       }
@@ -218,10 +225,17 @@ class ProcessLibraryPage {
         
         // Check if target is actually before this page's range
         const targetBeforeRange = this.compareProcessNames(processName, pageRange.firstItem) < 0;
-        console.log(`🔍 DEBUG: targetBeforeRange=${targetBeforeRange}, scanReason=${scanReason}, firstItem="${pageRange.firstItem}"`);
+        const targetAfterRange = this.compareProcessNames(processName, pageRange.lastItem) > 0;
+        console.log(`🔍 DEBUG: targetBeforeRange=${targetBeforeRange}, targetAfterRange=${targetAfterRange}, scanReason=${scanReason}`);
         
+        // If target is after the last item, continue forward
+        if (targetAfterRange) {
+          console.log(`⏭️  Target > lastItem "${pageRange.lastItem}" - continuing forward`);
+          lastValidPage = currentPage;
+          // Continue to forward jump logic below
+        }
         // If we scanned because target < firstItem but shared prefix, OR discovered target < firstItem after scanning
-        if (scanReason === 'prefix-before' || targetBeforeRange) {
+        else if (scanReason === 'prefix-before' || targetBeforeRange) {
           // If this is page 1, we can't go backward, so go forward instead
           if (currentPage === 1) {
             console.log(`⏭️  Page 1 scanned - continuing forward`);
@@ -246,7 +260,10 @@ class ProcessLibraryPage {
             const pageLoaded = await this.goToPage(currentPage);
             if (!pageLoaded) {
               currentPage = lastValidPage + 1;
-              await this.goToPage(currentPage);
+              const retryLoaded = await this.goToPage(currentPage);
+              if (!retryLoaded) {
+                throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+              }
             }
             continue;
           }
@@ -260,7 +277,10 @@ class ProcessLibraryPage {
           const pageLoaded = await this.goToPage(currentPage);
           if (!pageLoaded) {
             currentPage = lastValidPage + 1;
-            await this.goToPage(currentPage);
+            const retryLoaded = await this.goToPage(currentPage);
+            if (!retryLoaded) {
+              throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+            }
           }
           continue;
         } else {
@@ -321,20 +341,116 @@ class ProcessLibraryPage {
       
       if (!pageLoaded) {
         // Page doesn't exist - we've gone past the last page
-        // Update upper bound to try lower page
-        console.log(`⬅️  Page ${currentPage} doesn't exist - updating upper bound`);
-        maxValidPage = currentPage - 1;
-        
-        // Check if binary search range is exhausted
-        if (lastValidPage >= maxValidPage) {
-          console.log(`🛑 Binary search exhausted (${lastValidPage} >= ${maxValidPage})`);
+        // Use smart binary search: jump back quickly, only scan when needed
+        console.log(`⬅️  Page ${currentPage} doesn't exist - fast backward search from ${lastValidPage}`);
+
+        if (maxValidPage === null || currentPage - 1 < maxValidPage) {
+          maxValidPage = currentPage - 1;
+        }
+
+        if (maxValidPage <= lastValidPage) {
+          console.log(`🛑 Search exhausted (${lastValidPage} >= ${maxValidPage})`);
           throw new Error(`${processName} not found - reached end of available pages`);
         }
+
+        // Binary search with smart scanning
+        while (lastValidPage < maxValidPage) {
+          currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+          if (currentPage === lastValidPage) {
+            currentPage = lastValidPage + 1;
+          }
+          
+          const midLoaded = await this.goToPage(currentPage);
+          if (!midLoaded) {
+            // Page doesn't exist, move left
+            maxValidPage = currentPage - 1;
+            continue;
+          }
+          
+          const midRange = await this.getPageRange();
+          if (!midRange.firstItem) {
+            maxValidPage = currentPage - 1;
+            continue;
+          }
+          
+          const compFirst = this.compareProcessNames(processName, midRange.firstItem);
+          const compLast = this.compareProcessNames(processName, midRange.lastItem);
+          
+          console.log(`🔍 Binary check page ${currentPage}: [${midRange.firstItem}] → [${midRange.lastItem}]`);
+          
+          // Always scan the page to avoid missing targets
+          const processLinks = this.page.locator('table tr td:nth-child(2) a');
+          const linkCount = await processLinks.count();
+          
+          for (let i = 0; i < linkCount; i++) {
+            const linkText = await processLinks.nth(i).innerText();
+            const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
+            const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
+            
+            if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
+              console.log(`🎯 FOUND "${processName}" on page ${currentPage}`);
+              console.log('━'.repeat(60));
+              
+              await Promise.all([
+                this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
+                processLinks.nth(i).click()
+              ]);
+              return;
+            }
+          }
+          
+          // Not found, use comparison to narrow range
+          if (compLast < 0) {
+            // Target is before this page
+            maxValidPage = currentPage - 1;
+          } else {
+            // Target is after this page
+            lastValidPage = currentPage;
+          }
+        }
         
-        currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
-        blockSize = 1;
-        await this.goToPage(currentPage);
-        continue;
+        // Binary search converged - scan the final pages to confirm
+        console.log(`📍 Binary search converged at page ${lastValidPage}-${maxValidPage}`);
+        
+        const pagesToScan = [lastValidPage, lastValidPage + 1, maxValidPage];
+        for (const pageNum of pagesToScan) {
+          if (pageNum <= 0 || pageNum > lastValidPage + 10) continue;
+          
+          console.log(`🔎 Final check on page ${pageNum}`);
+          const scanLoaded = await this.goToPage(pageNum);
+          if (!scanLoaded) continue;
+          
+          const scanRange = await this.getPageRange();
+          if (!scanRange.firstItem) continue;
+          
+          const processLinks = this.page.locator('table tr td:nth-child(2) a');
+          const linkCount = await processLinks.count();
+          
+          for (let i = 0; i < linkCount; i++) {
+            const linkText = await processLinks.nth(i).innerText();
+            const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
+            const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
+            
+            if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
+              console.log(`🎯 FOUND "${processName}" on page ${pageNum} (final check)`);
+              console.log('━'.repeat(60));
+              
+              await Promise.all([
+                this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
+                processLinks.nth(i).click()
+              ]);
+              return;
+            }
+          }
+        }
+        
+        console.log(`� Process not found in binary search range [${lastValidPage}-${maxValidPage}]`);
+        console.log(`📍 Resuming exponential search from page ${maxValidPage}`);
+        
+        // Resume exponential search from maxValidPage
+        currentPage = maxValidPage;
+        maxValidPage = null; // Reset upper bound
+        continue; // Continue the main loop
       }
       
       // Increase block size exponentially (with cap) only if no upper bound
@@ -353,18 +469,15 @@ class ProcessLibraryPage {
     
     // Wait for table content to be available
     try {
-      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
+      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 5000 });
     } catch (e) {
-      // Debug: capture what's actually on the page
-      const pageContent = await this.page.content();
-      console.error('❌ Failed to find table content. Page HTML length:', pageContent.length);
+      console.error('❌ Failed to find table content. Retrying...');
       
-      // Retry once after waiting longer
-      console.log('⏳ Retrying after 2 seconds...');
-      await this.page.waitForTimeout(2000);
+      // Retry once after a short wait
+      await this.page.waitForTimeout(500);
       
       try {
-        await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
+        await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 5000 });
       } catch (e2) {
         // Still failed - return null
         return { firstItem: null, lastItem: null };
@@ -404,22 +517,16 @@ class ProcessLibraryPage {
 
   compareProcessNames(target, reference) {
     // Custom comparison to match website's sorting:
-    // - Strips special characters first
-    // - Case-insensitive comparison
-    // Simple and reliable
+    // - Strips special characters (dots, spaces, hyphens, etc.)
+    // - CASE-SENSITIVE comparison (uppercase comes before lowercase in ASCII)
+    // - This matches the website's actual sorting behavior
     
-    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
     
     const strippedTarget = stripSpecial(target);
     const strippedReference = stripSpecial(reference);
     
-    // Debug logging for troubleshooting
-    if (target.includes('googleearth') && reference.includes('google')) {
-      console.log(`🔍 COMPARE DEBUG: "${target}" vs "${reference}"`);
-      console.log(`   Stripped: "${strippedTarget}" vs "${strippedReference}"`);
-      console.log(`   Result: ${strippedTarget < strippedReference ? -1 : strippedTarget > strippedReference ? 1 : 0}`);
-    }
-    
+    // Case-sensitive comparison for sorting order
     if (strippedTarget < strippedReference) return -1;
     if (strippedTarget > strippedReference) return 1;
     return 0;

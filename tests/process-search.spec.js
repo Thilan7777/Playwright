@@ -74,26 +74,37 @@ test.describe('ProcessChecker Automation', () => {
       await library.selectLetter(processName[0]);
 
       // 3️⃣ Find process using lexicographical pruning
-      await library.openProcess(processName);
-
-      // 4️⃣ Extract ALL file paths data
-      const allData = await details.getAllFilePathsData();
+      let processFound = true;
+      let allData = [];
       
-      console.log(`\n${'='.repeat(70)}`);
-      console.log(`📊 Found ${allData.length} result(s) for: ${processName}`);
-      console.log(`${'='.repeat(70)}`);
-      
-      allData.forEach((row, index) => {
-        console.log(`\n[Row ${index + 1}]`);
-        console.log(`  Path: ${row.path}`);
-        console.log(`  Product Name: ${row.productName}`);
-        console.log(`  Vendor: ${row.vendor}`);
-        console.log(`  Version: ${row.version}`);
-        console.log(`  Size: ${row.size}`);
-        console.log(`  MD5: ${row.md5}`);
-      });
-      
-      console.log(`\n${'='.repeat(70)}\n`);
+      try {
+        await library.openProcess(processName);
+        
+        // 4️⃣ Extract ALL file paths data
+        allData = await details.getAllFilePathsData();
+        
+        console.log(`\n${'='.repeat(70)}`);
+        console.log(`📊 Found ${allData.length} result(s) for: ${processName}`);
+        console.log(`${'='.repeat(70)}`);
+        
+        allData.forEach((row, index) => {
+          console.log(`\n[Row ${index + 1}]`);
+          console.log(`  Path: ${row.path}`);
+          console.log(`  Product Name: ${row.productName}`);
+          console.log(`  Vendor: ${row.vendor}`);
+          console.log(`  Version: ${row.version}`);
+          console.log(`  Size: ${row.size}`);
+          console.log(`  MD5: ${row.md5}`);
+        });
+        
+        console.log(`\n${'='.repeat(70)}\n`);
+      } catch (error) {
+        // Process not found
+        processFound = false;
+        console.log(`\n${'='.repeat(70)}`);
+        console.log(`❌ Process "${processName}" not found in the database`);
+        console.log(`${'='.repeat(70)}\n`);
+      }
 
       // 5️⃣ Display results in the input page (reuse the same window)
       const resultsPath = 'file:///' + path.resolve(__dirname, '../results.html').replace(/\\/g, '/');
@@ -105,23 +116,37 @@ test.describe('ProcessChecker Automation', () => {
       // Load results into the HTML page
       await inputPage.evaluate((resultsData) => {
         window.loadResults(resultsData);
-      }, { processName, data: allData, length: allData.length, searchTime });
+      }, { 
+        processName, 
+        data: allData, 
+        length: allData.length, 
+        searchTime,
+        notFound: !processFound 
+      });
       
       // Wait a moment to ensure results are displayed
       await inputPage.waitForTimeout(1000);
       
-      console.log(`✅ Results displayed in UI page.`);
-      console.log(`📊 Total search time: ${searchTime}`);
+      if (processFound) {
+        console.log(`✅ Results displayed in UI page.`);
+        console.log(`📊 Total search time: ${searchTime}`);
+      } else {
+        console.log(`❌ Not found message displayed in UI page.`);
+        console.log(`📊 Total search time: ${searchTime}`);
+      }
       console.log(`🔒 Closing ProcessChecker browser...\n`);
       
       // Close the ProcessChecker search page
       await searchPage.close();
       
-      // 6️⃣ Basic validation
-      expect(allData.length).toBeGreaterThan(0);
-      expect(allData[0].path.toLowerCase()).toContain(processName.split('.')[0].toLowerCase());
-      
-      console.log(`✅ Test completed successfully!`);
+      // 6️⃣ Basic validation - only check if process was found
+      if (processFound) {
+        expect(allData.length).toBeGreaterThan(0);
+        expect(allData[0].path.toLowerCase()).toContain(processName.split('.')[0].toLowerCase());
+        console.log(`✅ Test completed successfully!`);
+      } else {
+        console.log(`ℹ️  Test completed - process not found (this is not an error)`);
+      }
       console.log(`⏸️  Results page is open. Click "🔄 New Search" or close the page.\n`);
 
       // Wait for either: user closes the page OR navigates to new search

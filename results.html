@@ -335,9 +335,52 @@
             
             // Update summary
             document.getElementById('processName').textContent = data.processName;
-            document.getElementById('totalCount').textContent = data.data.length;
             document.getElementById('searchTime').textContent = data.searchTime || '-';
             document.getElementById('timestamp').textContent = new Date().toLocaleString();
+            
+            // Check if process was not found
+            if (data.notFound) {
+                document.getElementById('totalCount').textContent = '0';
+                document.querySelector('.results-header').style.display = 'none';
+                document.querySelector('.table-container').style.display = 'none';
+                document.querySelector('.actions .secondary').style.display = 'none';
+                
+                // Add a not found message
+                const tableContainer = document.querySelector('.table-container');
+                if (tableContainer.nextElementSibling && tableContainer.nextElementSibling.classList.contains('not-found-message')) {
+                    // Already exists
+                } else {
+                    const notFoundDiv = document.createElement('div');
+                    notFoundDiv.className = 'not-found-message';
+                    notFoundDiv.innerHTML = `
+                        <div style="text-align: center; padding: 60px; color: #666;">
+                            <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+                            <h3 style="font-size: 24px; margin-bottom: 10px; color: #333;">Process Not Found</h3>
+                            <p style="font-size: 16px; margin-bottom: 20px;">
+                                The process "<strong>${data.processName}</strong>" was not found in the ProcessChecker database.
+                            </p>
+                            <p style="font-size: 14px; color: #888;">
+                                Please verify the process name and try again.<br>
+                                Note: Process names are case-insensitive but must be exact matches.
+                            </p>
+                        </div>
+                    `;
+                    tableContainer.parentNode.insertBefore(notFoundDiv, tableContainer.nextSibling);
+                }
+                return;
+            }
+            
+            // Normal results display
+            document.getElementById('totalCount').textContent = data.data.length;
+            document.querySelector('.results-header').style.display = 'flex';
+            document.querySelector('.table-container').style.display = 'block';
+            document.querySelector('.actions .secondary').style.display = 'inline-flex';
+            
+            // Remove not found message if it exists
+            const notFoundMsg = document.querySelector('.not-found-message');
+            if (notFoundMsg) {
+                notFoundMsg.remove();
+            }
             
             // Build table rows
             const tbody = document.getElementById('tableBody');
