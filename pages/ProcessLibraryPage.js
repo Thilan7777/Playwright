@@ -113,12 +113,10 @@ class ProcessLibraryPage {
       }
 
       // Check if target shares prefix with first item - important for sorting edge cases
-      // Use 3-character prefix for better precision, preserving hyphens and spaces
-      const normalize = (str) => str.toLowerCase().replace(/\.exe$/i, '').replace(/[._]/g, '').trim();
-      const targetNorm = normalize(processName);
-      const firstNorm = normalize(pageRange.firstItem);
-      const targetPrefix3 = targetNorm.substring(0, 3);
-      const firstPrefix3 = firstNorm.substring(0, 3);
+      // Use 3-character prefix for better precision
+      const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const targetPrefix3 = stripSpecial(processName).substring(0, 3);
+      const firstPrefix3 = stripSpecial(pageRange.firstItem).substring(0, 3);
       const sharesFirstPrefix = targetPrefix3 === firstPrefix3 || (targetPrefix3.length >= 2 && firstPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === firstPrefix3.substring(0, 2));
       
       // Target is before this page - we overshot
@@ -191,8 +189,7 @@ class ProcessLibraryPage {
 
       // Target is within this page range - scan it
       // Also scan if target has same prefix as last item OR first item (safety check for sorting edge cases)
-      const lastNorm = normalize(pageRange.lastItem);
-      const lastPrefix3 = lastNorm.substring(0, 3);
+      const lastPrefix3 = stripSpecial(pageRange.lastItem).substring(0, 3);
       const comparisonResult = this.compareProcessNames(processName, pageRange.lastItem);
       const sharesLastPrefix = targetPrefix3 === lastPrefix3 || (targetPrefix3.length >= 2 && lastPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === lastPrefix3.substring(0, 2));
       // Always scan if in binary search mode (blockSize == 1) or if prefix matches or if target is in range
@@ -607,24 +604,17 @@ class ProcessLibraryPage {
 
   compareProcessNames(target, reference) {
     // Custom comparison for process names:
-    // - KEEP hyphens, spaces, and most special chars to match website sorting
-    // - Only remove .exe extension and some decorative chars
+    // - Strips special characters (dots, spaces, hyphens, etc.)
     // - CASE-INSENSITIVE comparison
     
-    const normalize = (str) => {
-      return str
-        .toLowerCase()
-        .replace(/\.exe$/i, '')  // Remove .exe extension
-        .replace(/[._]/g, '')    // Remove dots and underscores only
-        .trim();                 // Trim leading/trailing spaces
-    };
+    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     
-    const normalizedTarget = normalize(target);
-    const normalizedReference = normalize(reference);
+    const strippedTarget = stripSpecial(target);
+    const strippedReference = stripSpecial(reference);
     
     // Case-insensitive comparison
-    if (normalizedTarget < normalizedReference) return -1;
-    if (normalizedTarget > normalizedReference) return 1;
+    if (strippedTarget < strippedReference) return -1;
+    if (strippedTarget > strippedReference) return 1;
     return 0;
   }
 }
