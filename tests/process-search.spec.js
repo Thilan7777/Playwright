@@ -124,8 +124,8 @@ test.describe('ProcessChecker Automation', () => {
         notFound: !processFound 
       });
       
-      // Wait a moment to ensure results are displayed
-      await inputPage.waitForTimeout(1000);
+      // Wait briefly to ensure results are displayed (reduced from 1000ms to 300ms)
+      await inputPage.waitForTimeout(300);
       
       if (processFound) {
         console.log(`✅ Results displayed in UI page.`);

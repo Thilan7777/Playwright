@@ -96,11 +96,11 @@ class ProcessLibraryPage {
 
       console.log(`📍 Page ${currentPage}: [${pageRange.firstItem}] → [${pageRange.lastItem}] (block=${blockSize})`);
 
-      // Debug: If this is page 1009, log all items
-      if (currentPage === 1009) {
+      // Debug: If this is page 126 or 1009, log all items
+      if (currentPage === 126 || currentPage === 1009) {
         const processLinks = this.page.locator('table tr td:nth-child(2) a');
         const count = await processLinks.count();
-        console.log(`🔍 DEBUG Page 1009 - Total items: ${count}`);
+        console.log(`🔍 DEBUG Page ${currentPage} - Total items: ${count}`);
         for (let i = 0; i < Math.min(count, 10); i++) {
           const item = await processLinks.nth(i).innerText();
           console.log(`  [${i}] ${item}`);
@@ -113,9 +113,13 @@ class ProcessLibraryPage {
       }
 
       // Check if target shares prefix with first item - important for sorting edge cases
-      const targetPrefix = processName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 1);
-      const firstPrefix = pageRange.firstItem.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 1);
-      const sharesFirstPrefix = targetPrefix === firstPrefix;
+      // Use 3-character prefix for better precision, preserving hyphens and spaces
+      const normalize = (str) => str.toLowerCase().replace(/\.exe$/i, '').replace(/[._]/g, '').trim();
+      const targetNorm = normalize(processName);
+      const firstNorm = normalize(pageRange.firstItem);
+      const targetPrefix3 = targetNorm.substring(0, 3);
+      const firstPrefix3 = firstNorm.substring(0, 3);
+      const sharesFirstPrefix = targetPrefix3 === firstPrefix3 || (targetPrefix3.length >= 2 && firstPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === firstPrefix3.substring(0, 2));
       
       // Target is before this page - we overshot
       if (this.compareProcessNames(processName, pageRange.firstItem) < 0 && !sharesFirstPrefix) {
@@ -133,7 +137,41 @@ class ProcessLibraryPage {
         
         // Check if binary search range is exhausted
         if (lastValidPage >= maxValidPage) {
-          console.log(`🛑 Binary search exhausted (${lastValidPage} >= ${maxValidPage})`);
+          console.log(`⚠️  Binary search range collapsed (${lastValidPage} >= ${maxValidPage}) - scanning final pages`);
+          
+          // Before giving up, scan the boundary pages
+          const pagesToCheck = new Set([lastValidPage, maxValidPage, lastValidPage + 1]);
+          for (const pageNum of pagesToCheck) {
+            if (pageNum <= 0 || scannedPages.has(pageNum)) continue;
+            
+            console.log(`🔍 Final boundary check on page ${pageNum}`);
+            const scanLoaded = await this.goToPage(pageNum);
+            if (!scanLoaded) continue;
+            
+            scannedPages.add(pageNum);
+            
+            const processLinks = this.page.locator('table tr td:nth-child(2) a');
+            const linkCount = await processLinks.count();
+            
+            for (let i = 0; i < linkCount; i++) {
+              const linkText = await processLinks.nth(i).innerText();
+              const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
+              const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
+              
+              if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
+                console.log(`🎯 FOUND "${processName}" on page ${pageNum} (boundary check)`);
+                console.log('━'.repeat(60));
+                
+                await Promise.all([
+                  this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
+                  processLinks.nth(i).click()
+                ]);
+                return;
+              }
+            }
+          }
+          
+          console.log(`🛑 Binary search exhausted after scanning ${Array.from(pagesToCheck).join(', ')}`);
           throw new Error(`${processName} not found - binary search exhausted`);
         }
         
@@ -153,12 +191,15 @@ class ProcessLibraryPage {
 
       // Target is within this page range - scan it
       // Also scan if target has same prefix as last item OR first item (safety check for sorting edge cases)
-      const lastPrefix = pageRange.lastItem.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 1);
+      const lastNorm = normalize(pageRange.lastItem);
+      const lastPrefix3 = lastNorm.substring(0, 3);
       const comparisonResult = this.compareProcessNames(processName, pageRange.lastItem);
-      const sharesLastPrefix = targetPrefix === lastPrefix;
+      const sharesLastPrefix = targetPrefix3 === lastPrefix3 || (targetPrefix3.length >= 2 && lastPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === lastPrefix3.substring(0, 2));
+      // Always scan if in binary search mode (blockSize == 1) or if prefix matches or if target is in range
       const shouldScan = comparisonResult <= 0 || 
                          sharesLastPrefix ||
-                         sharesFirstPrefix;
+                         sharesFirstPrefix ||
+                         blockSize === 1;
       
       if (shouldScan) {
         // Check if we've already scanned this page
@@ -179,10 +220,10 @@ class ProcessLibraryPage {
         
         let scanReason = 'in-range';  // Track why we're scanning
         if (sharesFirstPrefix && this.compareProcessNames(processName, pageRange.firstItem) < 0) {
-          console.log(`✅ Target < firstItem but shares prefix "${targetPrefix}" - SCANNING page ${currentPage}`);
+          console.log(`✅ Target < firstItem but shares prefix "${targetPrefix3}" - SCANNING page ${currentPage}`);
           scanReason = 'prefix-before';
         } else if (sharesLastPrefix && comparisonResult > 0) {
-          console.log(`✅ Target > lastItem but shares prefix "${targetPrefix}" - SCANNING page ${currentPage}`);
+          console.log(`✅ Target > lastItem but shares prefix "${targetPrefix3}" - SCANNING page ${currentPage}`);
           scanReason = 'prefix-after';
         } else {
           console.log(`✅ Target in range - SCANNING page ${currentPage}`);
@@ -251,7 +292,41 @@ class ProcessLibraryPage {
             
             // Check if binary search range exists
             if (lastValidPage >= maxValidPage) {
-              console.log(`🛑 Binary search exhausted (${lastValidPage} >= ${maxValidPage})`);
+              console.log(`⚠️  Binary search range collapsed (${lastValidPage} >= ${maxValidPage}) - scanning boundary pages`);
+              
+              // Scan the boundary pages before giving up
+              const pagesToCheck = new Set([lastValidPage, maxValidPage, currentPage]);
+              for (const pageNum of pagesToCheck) {
+                if (pageNum <= 0 || scannedPages.has(pageNum)) continue;
+                
+                console.log(`🔍 Backward boundary check on page ${pageNum}`);
+                const scanLoaded = await this.goToPage(pageNum);
+                if (!scanLoaded) continue;
+                
+                scannedPages.add(pageNum);
+                
+                const processLinks = this.page.locator('table tr td:nth-child(2) a');
+                const linkCount = await processLinks.count();
+                
+                for (let i = 0; i < linkCount; i++) {
+                  const linkText = await processLinks.nth(i).innerText();
+                  const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
+                  const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
+                  
+                  if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
+                    console.log(`🎯 FOUND "${processName}" on page ${pageNum} (backward boundary)`);
+                    console.log('━'.repeat(60));
+                    
+                    await Promise.all([
+                      this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
+                      processLinks.nth(i).click()
+                    ]);
+                    return;
+                  }
+                }
+              }
+              
+              console.log(`🛑 Binary search exhausted after scanning backward boundaries`);
               throw new Error(`${processName} not found - binary search exhausted`);
             }
             
@@ -270,9 +345,17 @@ class ProcessLibraryPage {
         } else if (scanReason === 'in-range' && currentPage - lastValidPage > 1) {
           // We scanned this page expecting to find the target, but didn't
           // If there's a gap between lastValidPage and currentPage, search it
-          console.log(`⚠️  Expected to find target on page ${currentPage}, but didn't - checking gap`);
+          const gapSize = currentPage - lastValidPage - 1;
+          console.log(`⚠️  Expected to find target on page ${currentPage}, but didn't - checking gap of ${gapSize} pages`);
           maxValidPage = currentPage - 1;
-          currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+          
+          // If gap is small (<= 20 pages), scan sequentially from lastValidPage+1
+          if (gapSize <= 20) {
+            console.log(`📖 Small gap detected - sequential scan from page ${lastValidPage + 1}`);
+            currentPage = lastValidPage + 1;
+          } else {
+            currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+          }
           blockSize = 1;
           const pageLoaded = await this.goToPage(currentPage);
           if (!pageLoaded) {
@@ -329,7 +412,14 @@ class ProcessLibraryPage {
       // If we have an upper bound, do binary search
       if (maxValidPage !== null) {
         console.log(`⏭️  Binary search: target > "${pageRange.lastItem}" - searching between ${lastValidPage} and ${maxValidPage}`);
-        currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+        
+        // If the gap is small (<=20 pages), scan sequentially instead of binary search
+        if (maxValidPage - lastValidPage <= 20) {
+          console.log(`📖 Gap is small (${maxValidPage - lastValidPage} pages) - sequential scan`);
+          currentPage = lastValidPage + 1;
+        } else {
+          currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+        }
         blockSize = 1;
       } else {
         console.log(`⏭️  Target "${processName}" > "${pageRange.lastItem}" - jumping ${blockSize} pages`);
@@ -517,17 +607,24 @@ class ProcessLibraryPage {
 
   compareProcessNames(target, reference) {
     // Custom comparison for process names:
-    // - Strips special characters (dots, spaces, hyphens, etc.)
+    // - KEEP hyphens, spaces, and most special chars to match website sorting
+    // - Only remove .exe extension and some decorative chars
     // - CASE-INSENSITIVE comparison
     
-    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const normalize = (str) => {
+      return str
+        .toLowerCase()
+        .replace(/\.exe$/i, '')  // Remove .exe extension
+        .replace(/[._]/g, '')    // Remove dots and underscores only
+        .trim();                 // Trim leading/trailing spaces
+    };
     
-    const strippedTarget = stripSpecial(target);
-    const strippedReference = stripSpecial(reference);
+    const normalizedTarget = normalize(target);
+    const normalizedReference = normalize(reference);
     
     // Case-insensitive comparison
-    if (strippedTarget < strippedReference) return -1;
-    if (strippedTarget > strippedReference) return 1;
+    if (normalizedTarget < normalizedReference) return -1;
+    if (normalizedTarget > normalizedReference) return 1;
     return 0;
   }
 }
