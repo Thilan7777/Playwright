@@ -14,8 +14,6 @@ test.describe('ProcessChecker Automation', () => {
     let inputPage = null;
     
     while (continueSearching) {
-      const startTime = Date.now();
-      
       // Open input form (or reuse existing page from "New Search")
       if (!inputPage || inputPage.isClosed()) {
         inputPage = await browser.newContext().then(ctx => ctx.newPage());
@@ -55,6 +53,9 @@ test.describe('ProcessChecker Automation', () => {
       processName = title.replace('SUBMITTED:', '');
       console.log(`✅ User entered: ${processName}\n`);
       
+      // Start timing AFTER user input is captured
+      const startTime = Date.now();
+      
       // Don't close input page - we'll reuse it later for results
       // await inputPage.close(); // REMOVED
       
@@ -76,9 +77,10 @@ test.describe('ProcessChecker Automation', () => {
       // 3️⃣ Find process using lexicographical pruning
       let processFound = true;
       let allData = [];
+      let foundInfo = { foundOnPage: null, letter: null };
       
       try {
-        await library.openProcess(processName);
+        foundInfo = await library.openProcess(processName);
         
         // 4️⃣ Extract ALL file paths data
         allData = await details.getAllFilePathsData();
@@ -121,7 +123,9 @@ test.describe('ProcessChecker Automation', () => {
         data: allData, 
         length: allData.length, 
         searchTime,
-        notFound: !processFound 
+        notFound: !processFound,
+        foundOnPage: foundInfo.foundOnPage,
+        letter: foundInfo.letter
       });
       
       // Wait briefly to ensure results are displayed (reduced from 1000ms to 300ms)

@@ -283,6 +283,14 @@
                             <strong>🕒 Search Time:</strong>
                             <span id="searchTime">-</span>
                         </div>
+                        <div class="summary-item">
+                            <strong>📄 Found on Page:</strong>
+                            <span id="foundOnPage">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <strong>🔤 Letter:</strong>
+                            <span id="foundLetter">-</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -336,11 +344,15 @@
             // Update summary
             document.getElementById('processName').textContent = data.processName;
             document.getElementById('searchTime').textContent = data.searchTime || '-';
+            document.getElementById('foundOnPage').textContent = data.foundOnPage !== null && data.foundOnPage !== undefined ? data.foundOnPage : '-';
+            document.getElementById('foundLetter').textContent = data.letter || '-';
             document.getElementById('timestamp').textContent = new Date().toLocaleString();
             
             // Check if process was not found
             if (data.notFound) {
                 document.getElementById('totalCount').textContent = '0';
+                document.getElementById('foundOnPage').textContent = '-';
+                document.getElementById('foundLetter').textContent = '-';
                 document.querySelector('.results-header').style.display = 'none';
                 document.querySelector('.table-container').style.display = 'none';
                 document.querySelector('.actions .secondary').style.display = 'none';

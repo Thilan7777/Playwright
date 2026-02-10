@@ -22,6 +22,7 @@ class ProcessLibraryPage {
     
     // Store the base URL for this letter (for direct page navigation)
     this.baseUrl = this.page.url();
+    this.selectedLetter = letter.toUpperCase();
     console.log(`🔤 Selected letter "${letter}" - URL: ${this.baseUrl}`);
     
     // Check if URL already has a page parameter
@@ -166,11 +167,15 @@ class ProcessLibraryPage {
                 console.log(`🎯 FOUND "${processName}" on page ${pageNum} (boundary check)`);
                 console.log('━'.repeat(60));
                 
+                // Store the found page info before navigating
+                this.foundOnPage = pageNum;
+                this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+                
                 await Promise.all([
                   this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
                   processLinks.nth(i).click()
                 ]);
-                return;
+                return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
               }
             }
           }
@@ -256,11 +261,15 @@ class ProcessLibraryPage {
             console.log(`📊 Total pages checked: ${currentPage} (exponential search with binary refinement)`);
             console.log('━'.repeat(60));
             
+            // Store the found page info before navigating
+            this.foundOnPage = currentPage;
+            this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+            
             await Promise.all([
               this.page.waitForLoadState('load', { timeout: 10000 }),
               processLinks.nth(i).click()
             ]);
-            return;
+            return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
           }
         }
         
@@ -320,11 +329,15 @@ class ProcessLibraryPage {
                     console.log(`🎯 FOUND "${processName}" on page ${pageNum} (backward boundary)`);
                     console.log('━'.repeat(60));
                     
+                    // Store the found page info before navigating
+                    this.foundOnPage = pageNum;
+                    this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+                    
                     await Promise.all([
                       this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
                       processLinks.nth(i).click()
                     ]);
-                    return;
+                    return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
                   }
                 }
               }
@@ -396,11 +409,15 @@ class ProcessLibraryPage {
             console.log(`📊 Total pages checked: ${currentPage}`);
             console.log('━'.repeat(60));
             
+            // Store the found page info before navigating
+            this.foundOnPage = currentPage;
+            this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+            
             await Promise.all([
               this.page.waitForLoadState('load', { timeout: 10000 }),
               processLinks.nth(i).click()
             ]);
-            return;
+            return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
           }
         }
         
@@ -528,11 +545,15 @@ class ProcessLibraryPage {
               console.log(`🎯 FOUND "${processName}" on page ${pageNum} (final check)`);
               console.log('━'.repeat(60));
               
+              // Store the found page info before navigating
+              this.foundOnPage = pageNum;
+              this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+              
               await Promise.all([
                 this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
                 processLinks.nth(i).click()
               ]);
-              return;
+              return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
             }
           }
         }
