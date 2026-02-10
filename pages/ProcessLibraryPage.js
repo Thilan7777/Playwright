@@ -22,6 +22,12 @@ class ProcessLibraryPage {
     
     // Store the base URL for this letter (for direct page navigation)
     this.baseUrl = this.page.url();
+    console.log(`🔤 Selected letter "${letter}" - URL: ${this.baseUrl}`);
+    
+    // Check if URL already has a page parameter
+    const urlObj = new URL(this.baseUrl);
+    const currentPageParam = urlObj.searchParams.get('page');
+    console.log(`📄 Current page parameter: ${currentPageParam || 'none (implies page 0 or 1)'}`);
   }
 
   async goToPage(pageNum) {
@@ -56,9 +62,10 @@ class ProcessLibraryPage {
     console.log('🚀 Using direct URL navigation (no clicking!)');
     console.log('━'.repeat(60));
     
-    let currentPage = 1;
+    // Start from page 0 since that's typically the first page after selecting a letter
+    let currentPage = 0;
     let blockSize = 8;
-    let lastValidPage = 1;
+    let lastValidPage = 0;
     let maxValidPage = null; // Upper bound when we overshoot
     const maxBlockSize = 128;
     const maxPages = 2000;
@@ -114,9 +121,8 @@ class ProcessLibraryPage {
 
       // Check if target shares prefix with first item - important for sorting edge cases
       // Use 3-character prefix for better precision
-      const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      const targetPrefix3 = stripSpecial(processName).substring(0, 3);
-      const firstPrefix3 = stripSpecial(pageRange.firstItem).substring(0, 3);
+      const targetPrefix3 = processName.trim().toLowerCase().substring(0, 3);
+      const firstPrefix3 = pageRange.firstItem.trim().toLowerCase().substring(0, 3);
       const sharesFirstPrefix = targetPrefix3 === firstPrefix3 || (targetPrefix3.length >= 2 && firstPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === firstPrefix3.substring(0, 2));
       
       // Target is before this page - we overshot
@@ -189,7 +195,7 @@ class ProcessLibraryPage {
 
       // Target is within this page range - scan it
       // Also scan if target has same prefix as last item OR first item (safety check for sorting edge cases)
-      const lastPrefix3 = stripSpecial(pageRange.lastItem).substring(0, 3);
+      const lastPrefix3 = pageRange.lastItem.trim().toLowerCase().substring(0, 3);
       const comparisonResult = this.compareProcessNames(processName, pageRange.lastItem);
       const sharesLastPrefix = targetPrefix3 === lastPrefix3 || (targetPrefix3.length >= 2 && lastPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === lastPrefix3.substring(0, 2));
       // Always scan if in binary search mode (blockSize == 1) or if prefix matches or if target is in range
@@ -603,18 +609,13 @@ class ProcessLibraryPage {
   }
 
   compareProcessNames(target, reference) {
-    // Custom comparison for process names:
-    // - Strips special characters (dots, spaces, hyphens, etc.)
-    // - CASE-INSENSITIVE comparison
+    // Match the website's sorting: case-insensitive, direct string comparison
+    // DO NOT strip special characters for navigation comparison
+    const targetLower = target.trim().toLowerCase();
+    const referenceLower = reference.trim().toLowerCase();
     
-    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    
-    const strippedTarget = stripSpecial(target);
-    const strippedReference = stripSpecial(reference);
-    
-    // Case-insensitive comparison
-    if (strippedTarget < strippedReference) return -1;
-    if (strippedTarget > strippedReference) return 1;
+    if (targetLower < referenceLower) return -1;
+    if (targetLower > referenceLower) return 1;
     return 0;
   }
 }
