@@ -341,6 +341,9 @@
             document.getElementById('loadingMessage').style.display = 'none';
             document.getElementById('resultsContent').style.display = 'block';
             
+            // Update page title to show process name
+            document.title = data.processName;
+            
             // Update summary
             document.getElementById('processName').textContent = data.processName;
             document.getElementById('searchTime').textContent = data.searchTime || '-';

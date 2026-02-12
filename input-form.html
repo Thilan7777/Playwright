@@ -215,17 +215,19 @@
                         type="text" 
                         id="processName" 
                         name="processName" 
-                        placeholder="Enter process name (e.g., chrome.exe)"
+                        placeholder="Enter process name(s) - single or multiple"
                         autocomplete="off"
                         autofocus
                         required
                     >
-                    <div class="hint">Enter the exact name of the process you want to search</div>
+                    <div class="hint">Enter one process name, or multiple names separated by commas or newlines</div>
                 </div>
                 
                 <div class="examples">
                     <strong>Examples:</strong>
-                    chrome.exe, EasyBiz.exe, notepad.exe, explorer.exe
+                    Single: chrome.exe<br>
+                    Multiple: chrome.exe, firefox.exe, notepad.exe<br>
+                    <em style="font-size: 11px; color: #888;">💡 Multiple processes will open in separate tabs</em>
                 </div>
                 
                 <div class="button-group">

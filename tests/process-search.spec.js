@@ -3,9 +3,10 @@ const path = require('path');
 const HomePage = require('../pages/HomePage');
 const ProcessLibraryPage = require('../pages/ProcessLibraryPage');
 const ProcessDetailsPage = require('../pages/ProcessDetailsPage');
+const { parseProcessNames, runMultipleProcesses } = require('../utils/multi-process-runner');
 
 test.describe('ProcessChecker Automation', () => {
-  test('Search for user-entered process name', async ({ page, browser }) => {
+  test('Search for user-entered process name', async ({ browser }) => {
     // Set infinite timeout for this test since we wait for user to close results page
     test.setTimeout(0);
     
@@ -16,7 +17,9 @@ test.describe('ProcessChecker Automation', () => {
     while (continueSearching) {
       // Open input form (or reuse existing page from "New Search")
       if (!inputPage || inputPage.isClosed()) {
-        inputPage = await browser.newContext().then(ctx => ctx.newPage());
+        const inputContext = await browser.newContext();
+        inputPage = await inputContext.newPage();
+        
         const formPath = 'file:///' + path.resolve(__dirname, '../input-form.html').replace(/\\/g, '/');
         await inputPage.goto(formPath);
       }
@@ -52,6 +55,49 @@ test.describe('ProcessChecker Automation', () => {
       
       processName = title.replace('SUBMITTED:', '');
       console.log(`✅ User entered: ${processName}\n`);
+      
+      // ========== NEW: Multi-Process Detection ==========
+      // Parse input to check if multiple process names were entered
+      const processNames = parseProcessNames(processName);
+      
+      if (processNames.length > 1) {
+        // MULTI-PROCESS MODE: Launch separate tabs for each process
+        console.log(`🔀 Detected ${processNames.length} process names - launching multi-tab search`);
+        console.log(`   Processes: ${processNames.join(', ')}\n`);
+        
+        // Close the input page since we'll show results in separate tabs
+        await inputPage.close();
+        
+        // Create a new context for the multi-process search
+        const multiContext = await browser.newContext();
+        
+        // Run multiple processes in parallel with concurrency limit
+        const multiResults = await runMultipleProcesses(multiContext, processNames, 3);
+        
+        // Log summary
+        const foundCount = multiResults.filter(r => r.processFound).length;
+        console.log(`\n✅ Multi-search completed: ${foundCount}/${processNames.length} found`);
+        console.log(`📑 ${processNames.length} tabs remain open with individual results`);
+        console.log(`👋 Close all tabs when done.\n`);
+        
+        // Wait for user to close all result tabs before exiting
+        console.log('⏸️  Waiting for you to close all result tabs...\n');
+        
+        // Wait until all pages in the context are closed
+        const pages = multiContext.pages();
+        if (pages.length > 0) {
+          await Promise.all(pages.map(p => p.waitForEvent('close', { timeout: 0 })));
+        }
+        
+        console.log('👋 All tabs closed. Exiting...\n');
+        
+        // Exit the loop - multi-process search is one-shot
+        continueSearching = false;
+        break;
+      }
+      
+      // SINGLE-PROCESS MODE: Continue with existing flow
+      console.log(`🔍 Single process mode - running standard search\n`);
       
       // Start timing AFTER user input is captured
       const startTime = Date.now();
