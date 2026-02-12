@@ -110,7 +110,7 @@ test.describe('ProcessChecker Automation', () => {
         const multiContext = await browser.newContext();
         
         // Run multiple processes in parallel with concurrency limit
-        const multiResults = await runMultipleProcesses(multiContext, processNames, 3);
+        const multiResults = await runMultipleProcesses(multiContext, processNames, 10);
         
         // Log summary
         const foundCount = multiResults.filter(r => r.processFound).length;

@@ -136,7 +136,7 @@ async function runSingleProcessSearch(page, processName, index = 0) {
  * @param {object} page - Playwright Page instance (results tab)
  * @param {object} results - Search results from runSingleProcessSearch
  */
-async function displayResultsInTab(page, results) {
+async function displayResultsInTab(page, results, allProcessNames = []) {
   const { processName, processFound, allData, searchTime, foundInfo, index } = results;
 
   // Load results.html in this tab
@@ -153,7 +153,8 @@ async function displayResultsInTab(page, results) {
     searchTime,
     notFound: !processFound,
     foundOnPage: foundInfo.foundOnPage,
-    letter: foundInfo.letter
+    letter: foundInfo.letter,
+    allProcessNames // Pass the list of all processes for navigation
   });
 
   // Wait briefly to ensure results are displayed
@@ -177,7 +178,6 @@ async function runMultipleProcesses(context, processNames, concurrency = 3) {
   console.log('='.repeat(70));
 
   const limiter = createConcurrencyLimiter(concurrency);
-  const results = [];
 
   // Create a search task for each process
   const tasks = processNames.map((processName, index) => {
@@ -185,16 +185,18 @@ async function runMultipleProcesses(context, processNames, concurrency = 3) {
       // Create a new page (tab) for this search
       const page = await context.newPage();
       
+      // Set window name for cross-window navigation/targeting
+      const targetName = 'ProcessDetails_' + processName.replace(/[^a-zA-Z0-9]/g, '_');
+      await page.evaluate((name) => window.name = name, targetName);
+      
       try {
         // Run the single-process search algorithm (UNCHANGED)
         const result = await runSingleProcessSearch(page, processName, index + 1);
         
-        // Display results in this tab (each tab shows its own results)
-        await displayResultsInTab(page, result);
+        // Display results in this tab
+        await displayResultsInTab(page, result, processNames);
         
-        results.push(result);
-        
-        // Keep tab open - don't close it (as per requirements)
+        // Return result for collection
         return result;
         
       } catch (error) {
@@ -211,18 +213,49 @@ async function runMultipleProcesses(context, processNames, concurrency = 3) {
           error: error.message
         };
         
-        results.push(errorResult);
         return errorResult;
       }
     });
   });
 
-  // Wait for all searches to complete
-  await Promise.all(tasks);
-
+  // Wait for all searches to complete and collect results from the limiter
+  // limiter wrapper returns the promise of the task
+  const results = await Promise.all(tasks);
+  
   console.log('\n' + '='.repeat(70));
   console.log(`✅ Completed ${results.length}/${processNames.length} searches`);
   console.log('='.repeat(70) + '\n');
+  
+  // Post-processing: Inject the full results dataset into ALL open result tabs
+  // This allows every tab to "link" to every other result by re-rendering locally
+  if (results.length > 0) {
+      console.log('🔄 Syncing results across all tabs for navigation...');
+      
+      const cleanResults = results.map(r => ({
+          processName: r.processName,
+          data: r.allData,
+          length: r.allData.length,
+          searchTime: r.searchTime,
+          notFound: !r.processFound,
+          foundOnPage: r.foundInfo?.foundOnPage,
+          letter: r.foundInfo?.letter,
+          // IMPORTANT: Include the list so buttons work
+          allProcessNames: processNames 
+      }));
+      
+      const contextPages = context.pages();
+      // Filter out any pages that might have been closed or aren't result pages
+      const activePages = contextPages.filter(p => !p.isClosed() && p.url().includes('results.html'));
+      
+      await Promise.all(activePages.map(page => 
+          page.evaluate((allData) => {
+              if (window.updateAllResults) {
+                  window.updateAllResults(allData);
+              }
+          }, cleanResults).catch(() => {}) // Ignore errors if page closed during sync
+      ));
+      console.log('✅ Tabs synced successfully');
+  }
 
   return results;
 }

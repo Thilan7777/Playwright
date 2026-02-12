@@ -253,6 +253,50 @@
             display: block;
             margin-bottom: 20px;
         }
+        /* New Process Navigation Styles */
+        .process-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #eef2f5;
+            border-radius: 6px;
+            border: 1px solid #dce1e6;
+        }
+        .process-nav-label {
+            width: 100%;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+        .process-btn {
+            background: white;
+            border: 1px solid #ccc;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #333;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .process-btn:hover {
+            background: #f0f0f0;
+            border-color: #999;
+        }
+        .process-btn.active {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+            font-weight: 600;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
@@ -266,6 +310,11 @@
         <div class="content">
             <div id="loadingMessage" class="loading">
                 <div>Loading results...</div>
+            </div>
+            
+            <div id="processNavContainer" class="process-nav" style="display: none;">
+                <div class="process-nav-label">🔎 Currently viewing process results. Switch to:</div>
+                <!-- Buttons will be injected here -->
             </div>
             
             <div id="resultsContent" style="display: none;">
@@ -329,11 +378,49 @@
 
     <script>
         let resultsData = null;
+        // Cache to store results for all processes
+        window.allResultsCache = {};
 
         // Function called by Playwright to load results
         window.loadResults = (data) => {
             resultsData = data;
+            
+            // Add self to cache
+            if (data.processName) {
+                window.allResultsCache[data.processName] = data;
+            }
+            
             displayResults(data);
+        };
+
+        // Function called by Playwright after all searches complete
+        window.updateAllResults = (allResultsList) => {
+            console.log('Received full results update', allResultsList);
+            allResultsList.forEach(item => {
+                if (item && item.processName) {
+                    window.allResultsCache[item.processName] = item;
+                    
+                    // Also ensure allProcessNames is populated in the item if missing
+                    if (!item.allProcessNames) {
+                        item.allProcessNames = allResultsList.map(r => r.processName);
+                    }
+                }
+            });
+            
+            // Re-render buttons if we have more data now
+            // But don't switch the current view, just refresh buttons
+            if (resultsData) {
+                // Ensure current view has the full list of names now
+                resultsData.allProcessNames = allResultsList.map(r => r.processName);
+                displayResults(resultsData);
+            }
+            
+            // Visual notification
+            const navLabel = document.querySelector('.process-nav-label');
+            if (navLabel) {
+                 navLabel.textContent = '✅ All searches completed. Switch to other process results:';
+                 navLabel.style.color = '#28a745';
+            }
         };
 
         function displayResults(data) {
@@ -350,6 +437,53 @@
             document.getElementById('foundOnPage').textContent = data.foundOnPage !== null && data.foundOnPage !== undefined ? data.foundOnPage : '-';
             document.getElementById('foundLetter').textContent = data.letter || '-';
             document.getElementById('timestamp').textContent = new Date().toLocaleString();
+
+            // Render Process Navigation buttons
+            if (data.allProcessNames && data.allProcessNames.length > 1) {
+                const navContainer = document.getElementById('processNavContainer');
+                navContainer.style.display = 'flex';
+                
+                // Clear existing buttons and add label
+                navContainer.innerHTML = '';
+                
+                const label = document.createElement('div');
+                label.className = 'process-nav-label';
+                label.textContent = '🔍 Switch to other process results:';
+                navContainer.appendChild(label);
+                
+                data.allProcessNames.forEach(proc => {
+                    const btn = document.createElement('button');
+                    const isActive = proc.toLowerCase() === data.processName.toLowerCase();
+                    
+                    btn.className = `process-btn ${isActive ? 'active' : ''}`;
+                    btn.textContent = proc;
+                    btn.title = isActive ? 'Current Tab' : `Switch to ${proc}`;
+                    
+                    if (isActive) {
+                        btn.disabled = true;
+                    } else {
+                        btn.onclick = () => {
+                            // Check if we have the data in cache
+                            const cached = window.allResultsCache[proc];
+                            
+                            if (cached) {
+                                // We have the data! render it immediately
+                                console.log(`Switching view to ${proc}`);
+                                displayResults(cached);
+                                
+                                // Update URL hash for better browser history/feel
+                                window.location.hash = proc;
+                            } else {
+                                // Data not valid or not loaded yet
+                                alert(`Results for "${proc}" are not fully loaded in this tab yet.\n\nPlease wait for all searches to complete.`);
+                            }
+                        };
+                    }
+                    navContainer.appendChild(btn);
+                });
+            } else {
+                document.getElementById('processNavContainer').style.display = 'none';
+            }
             
             // Check if process was not found
             if (data.notFound) {

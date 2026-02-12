@@ -3,6 +3,33 @@ class ProcessLibraryPage {
     this.page = page;
   }
 
+  async findAndClickProcess(processName) {
+    // Optimized scanning using evaluate to avoid multiple round-trips
+    const foundIndex = await this.page.evaluate((targetName) => {
+      const links = Array.from(document.querySelectorAll('table tr td:nth-child(2) a'));
+      const normalizedTarget = targetName.trim().replace(/\s+/g, ' ').toLowerCase();
+      
+      for (let i = 0; i < links.length; i++) {
+        const normalizedLink = links[i].innerText.trim().replace(/\s+/g, ' ').toLowerCase();
+        if (normalizedLink === normalizedTarget) {
+          return i;
+        }
+      }
+      return -1;
+    }, processName);
+
+    if (foundIndex !== -1) {
+      console.log(`🎯 FOUND "${processName}" at index ${foundIndex}`);
+      // Use Playwright locator to click robustly
+      await Promise.all([
+        this.page.waitForLoadState('domcontentloaded'),
+        this.page.locator('table tr td:nth-child(2) a').nth(foundIndex).click()
+      ]);
+      return true;
+    }
+    return false;
+  }
+
   async selectLetter(letter) {
     // Click on the letter link (e.g., A, B, C, etc.)
     // The letters are links with URLs like file.php?start=S
@@ -237,40 +264,10 @@ class ProcessLibraryPage {
           console.log(`✅ Target in range - SCANNING page ${currentPage}`);
         }
         
-        const processLinks = this.page.locator('table tr td:nth-child(2) a');
-        const linkCount = await processLinks.count();
-        
-        for (let i = 0; i < linkCount; i++) {
-          const linkText = await processLinks.nth(i).innerText();
-          // Normalize spaces for comparison (handle cases like "notepad .exe" vs "notepad.exe")
-          const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
-          const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
-          
-          // Debug: show items around the target
-          const isNotepadRelated = normalizedSearch.toLowerCase().includes('notepad') || normalizedLink.toLowerCase().includes('notepad');
-          if (isNotepadRelated) {
-            const isCaseInsensitiveMatch = (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase());
-            const matchType = (normalizedLink === normalizedSearch) ? '✓ EXACT' : 
-                            isCaseInsensitiveMatch ? '≈ case-diff' : '○';
-            console.log(`  🔎 ${matchType}: "${linkText}" (normalized: "${normalizedLink}")`);
-          }
-          
-          // Match case-insensitively so users can enter any capitalization
-          if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
-            console.log(`🎯 FOUND "${processName}" (actual: "${linkText}") on page ${currentPage}`);
-            console.log(`📊 Total pages checked: ${currentPage} (exponential search with binary refinement)`);
-            console.log('━'.repeat(60));
-            
-            // Store the found page info before navigating
+        if (await this.findAndClickProcess(processName)) {
             this.foundOnPage = currentPage;
             this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
-            
-            await Promise.all([
-              this.page.waitForLoadState('load', { timeout: 10000 }),
-              processLinks.nth(i).click()
-            ]);
             return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
-          }
         }
         
         // Not found on this page
@@ -317,28 +314,10 @@ class ProcessLibraryPage {
                 
                 scannedPages.add(pageNum);
                 
-                const processLinks = this.page.locator('table tr td:nth-child(2) a');
-                const linkCount = await processLinks.count();
-                
-                for (let i = 0; i < linkCount; i++) {
-                  const linkText = await processLinks.nth(i).innerText();
-                  const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
-                  const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
-                  
-                  if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
-                    console.log(`🎯 FOUND "${processName}" on page ${pageNum} (backward boundary)`);
-                    console.log('━'.repeat(60));
-                    
-                    // Store the found page info before navigating
-                    this.foundOnPage = pageNum;
-                    this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
-                    
-                    await Promise.all([
-                      this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
-                      processLinks.nth(i).click()
-                    ]);
-                    return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
-                  }
+                if (await this.findAndClickProcess(processName)) {
+                  this.foundOnPage = pageNum;
+                  this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+                  return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
                 }
               }
               
@@ -395,30 +374,10 @@ class ProcessLibraryPage {
         // Scan it even if target appears to be after last item
         console.log(`🔍 Last page detected (${pageRange.count} items) - scanning anyway`);
         
-        const processLinks = this.page.locator('table tr td:nth-child(2) a');
-        const linkCount = await processLinks.count();
-        
-        for (let i = 0; i < linkCount; i++) {
-          const linkText = await processLinks.nth(i).innerText();
-          // Normalize spaces for comparison
-          const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
-          const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
-          
-          if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
-            console.log(`🎯 FOUND "${processName}" on page ${currentPage} (last page)`);
-            console.log(`📊 Total pages checked: ${currentPage}`);
-            console.log('━'.repeat(60));
-            
-            // Store the found page info before navigating
-            this.foundOnPage = currentPage;
-            this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
-            
-            await Promise.all([
-              this.page.waitForLoadState('load', { timeout: 10000 }),
-              processLinks.nth(i).click()
-            ]);
-            return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
-          }
+        if (await this.findAndClickProcess(processName)) {
+           this.foundOnPage = currentPage;
+           this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+           return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
         }
         
         // Not found even on last page
@@ -489,24 +448,8 @@ class ProcessLibraryPage {
           console.log(`🔍 Binary check page ${currentPage}: [${midRange.firstItem}] → [${midRange.lastItem}]`);
           
           // Always scan the page to avoid missing targets
-          const processLinks = this.page.locator('table tr td:nth-child(2) a');
-          const linkCount = await processLinks.count();
-          
-          for (let i = 0; i < linkCount; i++) {
-            const linkText = await processLinks.nth(i).innerText();
-            const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
-            const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
-            
-            if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
-              console.log(`🎯 FOUND "${processName}" on page ${currentPage}`);
-              console.log('━'.repeat(60));
-              
-              await Promise.all([
-                this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
-                processLinks.nth(i).click()
-              ]);
-              return;
-            }
+          if (await this.findAndClickProcess(processName)) {
+            return; // Found and clicked
           }
           
           // Not found, use comparison to narrow range
@@ -533,28 +476,10 @@ class ProcessLibraryPage {
           const scanRange = await this.getPageRange();
           if (!scanRange.firstItem) continue;
           
-          const processLinks = this.page.locator('table tr td:nth-child(2) a');
-          const linkCount = await processLinks.count();
-          
-          for (let i = 0; i < linkCount; i++) {
-            const linkText = await processLinks.nth(i).innerText();
-            const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
-            const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
-            
-            if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
-              console.log(`🎯 FOUND "${processName}" on page ${pageNum} (final check)`);
-              console.log('━'.repeat(60));
-              
-              // Store the found page info before navigating
-              this.foundOnPage = pageNum;
-              this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
-              
-              await Promise.all([
-                this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
-                processLinks.nth(i).click()
-              ]);
-              return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
-            }
+          if (await this.findAndClickProcess(processName)) {
+            this.foundOnPage = pageNum;
+            this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+            return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
           }
         }
         

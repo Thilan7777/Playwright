@@ -53,15 +53,17 @@
             font-weight: 600;
             font-size: 14px;
         }
-        input[type="text"] {
+        textarea {
             width: 100%;
+            height: 120px;
             padding: 12px;
             border: 1px solid #d0d0d0;
             border-radius: 4px;
             font-size: 15px;
             font-family: 'Segoe UI', sans-serif;
+            resize: vertical;
         }
-        input[type="text"]:focus {
+        textarea:focus {
             outline: none;
             border-color: #0078d4;
             box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
@@ -210,23 +212,24 @@
         <div class="content">
             <form id="searchForm">
                 <div class="form-group">
-                    <label for="processName">Process Name:</label>
-                    <input 
-                        type="text" 
+                    <label for="processName">Process Name(s):</label>
+                    <textarea 
                         id="processName" 
                         name="processName" 
-                        placeholder="Enter process name(s) - single or multiple"
+                        placeholder="Enter process names here.&#10;For example:&#10;chrome.exe&#10;firefox.exe"
                         autocomplete="off"
                         autofocus
                         required
-                    >
-                    <div class="hint">Enter one process name, or multiple names separated by commas or newlines</div>
+                    ></textarea>
+                    <div class="hint">Enter one process name per line, or separate with commas</div>
                 </div>
                 
                 <div class="examples">
                     <strong>Examples:</strong>
                     Single: chrome.exe<br>
-                    Multiple: chrome.exe, firefox.exe, notepad.exe<br>
+                    Multiple (one per line):<br>
+                    chrome.exe<br>
+                    firefox.exe<br>
                     <em style="font-size: 11px; color: #888;">💡 Multiple processes will open in separate tabs</em>
                 </div>
                 
@@ -267,19 +270,25 @@
                 return;
             }
             
-            const processName = input.value.trim();
-            if (!processName) {
+            const inputVal = input.value.trim();
+            if (!inputVal) {
                 alert('Please enter a process name');
                 return;
             }
+            
+            // Normalize input: replace newlines with commas for easier processing
+            // This ensures Playwright receives a consistent format
+            // e.g., "chrome.exe\nfirefox.exe" -> "chrome.exe, firefox.exe"
+            const processName = inputVal.replace(/[\r\n]+/g, ', ');
 
             // Store the process name for Playwright to read
             window.processName = processName;
             document.title = 'SUBMITTED:' + processName;
             
             // Show status
+            const displayNames = processName.length > 50 ? processName.substring(0, 50) + '...' : processName;
             status.className = 'show searching';
-            status.textContent = `🔄 Searching for ${processName}... Please wait.`;
+            status.textContent = `🔄 Searching for ${displayNames}... Please wait.`;
             
             // Disable form
             input.disabled = true;
