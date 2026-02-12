@@ -478,13 +478,12 @@
         }
 
         function newSearch() {
-            // Get the path to input-form.html
-            const currentPath = window.location.pathname;
-            const directoryPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-            const inputFormPath = directoryPath + '/input-form.html';
+            // Get the current URL and replace results.html with input-form.html
+            const currentUrl = window.location.href;
+            const inputFormUrl = currentUrl.replace('results.html', 'input-form.html');
             
-            // Navigate to input form
-            window.location.href = inputFormPath;
+            // Navigate to input form (this will convert the current tab to an input form)
+            window.location.href = inputFormUrl;
         }
     </script>
 </body>

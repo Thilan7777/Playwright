@@ -253,9 +253,19 @@
         const submitBtn = document.getElementById('submitBtn');
         const cancelBtn = document.getElementById('cancelBtn');
         const status = document.getElementById('status');
+        
+        // Flag to prevent premature submission (e.g., from browser auto-restore)
+        // Expose to window scope so Playwright can check it
+        window.isFormReady = false;
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
+            
+            // Prevent submission if form is not ready (just loaded)
+            if (!window.isFormReady) {
+                console.warn('Form not ready yet - ignoring submission');
+                return;
+            }
             
             const processName = input.value.trim();
             if (!processName) {
@@ -283,8 +293,34 @@
             window.close();
         });
 
-        // Auto-focus input on load
+        // Auto-focus input on load and reset form state
         window.onload = () => {
+            // Reset title to default (important for Playwright test to not pick up old submission)
+            document.title = 'Process Search - Input';
+            
+            // Clear the process name from memory to prevent reuse
+            window.processName = '';
+            
+            // Clear the input field (force clear to prevent browser autocomplete)
+            input.value = '';
+            input.defaultValue = '';
+            
+            // Re-enable form controls
+            input.disabled = false;
+            submitBtn.disabled = false;
+            cancelBtn.disabled = false;
+            
+            // Hide status message
+            status.className = '';
+            status.textContent = '';
+            
+            // Mark form as ready only after cleanup is complete
+            // This prevents any auto-submit from browser form restoration
+            setTimeout(() => {
+                window.isFormReady = true;
+            }, 100);
+            
+            // Focus on input
             input.focus();
         };
 
