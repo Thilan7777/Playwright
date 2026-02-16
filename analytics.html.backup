@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 25px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .candidate-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+        
+        .candidate-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .candidate-card.best {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-color: #fdcb6e;
+        }
+        
+        .candidate-card.second-best {
+            background: linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%);
+            border-color: #b2bec3;
+        }
+        
+        .candidate-card.worst {
+            background: linear-gradient(135deg, #fab1a0 0%, #ff7675 100%);
+            border-color: #ff7675;
+        }
+        
+        .score-badge {
+            display: inline-block;
+            background: #333;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+        
+        .score-badge.positive {
+            background: #28a745;
+        }
+        
+        .score-badge.negative {
+            background: #dc3545;
+        }
+        
+        .field-row {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .field-label {
+            font-weight: 600;
+            color: #555;
+            min-width: 120px;
+        }
+        
+        .field-value {
+            color: #333;
+            word-break: break-word;
+            flex: 1;
+        }
+        
+        .path-value {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            color: #0066cc;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .md5-value {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .score-breakdown {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .score-item {
+            font-size: 13px;
+        }
+        
+        .score-item .score-name {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .score-item .score-val {
+            color: #333;
+            font-weight: 700;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        thead {
+            background: #f8f9fa;
+        }
+        
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #dee2e6;
+            color: #333;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .rank-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        
+        .rank-badge.gold {
+            background: #ffd700;
+            color: #333;
+        }
+        
+        .rank-badge.silver {
+            background: #c0c0c0;
+            color: #333;
+        }
+        
+        .rank-badge.bronze {
+            background: #cd7f32;
+            color: white;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .empty-message::before {
+            content: '📭';
+            font-size: 48px;
+            display: block;
+            margin-bottom: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .loading::before {
+            content: '⏳';
+            font-size: 64px;
+            display: block;
+            margin-bottom: 20px;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .action-buttons {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loadingMessage" class="loading">
+            <div>Loading analytics...</div>
+        </div>
+        
+        <div id="analyticsContent" style="display: none;">
+            <div class="header">
+                <h1>📊 Search Results Analytics</h1>
+                <div class="subtitle">Intelligent ranking and classification of search candidates</div>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="label">Total Candidates</div>
+                    <div class="value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Valid Candidates</div>
+                    <div class="value" id="statValid">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Ignored</div>
+                    <div class="value" id="statIgnored">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Worst Candidates</div>
+                    <div class="value" id="statWorst">0</div>
+                </div>
+            </div>
+            
+            <!-- Best Candidate -->
+            <div class="section" id="bestSection">
+                <div class="section-header">🏆 Best Candidate</div>
+                <div id="bestContent"></div>
+            </div>
+            
+            <!-- Second Best -->
+            <div class="section" id="secondBestSection">
+                <div class="section-header">🥈 Second Best Candidate</div>
+                <div id="secondBestContent"></div>
+            </div>
+            
+            <!-- Worst Candidates -->
+            <div class="section" id="worstSection">
+                <div class="section-header">⚠️ Worst Candidates (Score &lt; 0)</div>
+                <div id="worstContent"></div>
+            </div>
+            
+            <!-- Ignored Candidates -->
+            <div class="section" id="ignoredSection">
+                <div class="section-header">🚫 Ignored Candidates</div>
+                <div id="ignoredContent"></div>
+            </div>
+            
+            <!-- Full Ranking -->
+            <div class="section">
+                <div class="section-header">📊 Full Ranking Table</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Score</th>
+                                <th>Path</th>
+                                <th>Vendor</th>
+                                <th>Product Name</th>
+                                <th>Version</th>
+                                <th>MD5</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankingTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Print Report</button>
+                <button class="btn btn-secondary" onclick="window.close()">← Back to Results</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils/scoring.js"></script>
+    <script>
+        // Fallback timeout - if page doesn't load in 3 seconds, show error
+        setTimeout(function() {
+            if (document.getElementById('loadingMessage').style.display !== 'none') {
+                console.error('Timeout: Page failed to load within 3 seconds');
+                console.error('Checking status:');
+                console.error('- AnalyticsScoring available:', typeof window.AnalyticsScoring !== 'undefined');
+                console.error('- DOM ready:', document.readyState);
+                console.error('- localStorage data:', localStorage.getItem('analyticsData') ? 'Found' : 'Missing');
+                
+                document.getElementById('loadingMessage').innerHTML = `
+                    <div style="color: white; text-align: center; padding: 40px;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                        <h2 style="margin-bottom: 15px;">Loading Timeout</h2>
+                        <p style="margin-bottom: 15px;">The analytics page failed to load properly.</p>
+                        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin: 20px auto; max-width: 600px; text-align: left;">
+                            <p style="font-size: 14px; margin-bottom: 10px;"><strong>Diagnosis:</strong></p>
+                            <p style="font-size: 13px; margin-bottom: 8px;">• Scoring module: ${typeof window.AnalyticsScoring !== 'undefined' ? '✅ Loaded' : '❌ Failed to load'}</p>
+                            <p style="font-size: 13px; margin-bottom: 8px;">• Data available: ${localStorage.getItem('analyticsData') ? '✅ Yes' : '❌ No'}</p>
+                            <p style="font-size: 13px; margin-bottom: 8px;">• DOM state: ${document.readyState}</p>
+                        </div>
+                        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">
+                            ${typeof window.AnalyticsScoring === 'undefined' ? 
+                                '<strong>Issue:</strong> The scoring.js file failed to load.<br>This usually happens with file:// protocol.<br><strong>Solution:</strong> Use a local web server instead.' :
+                                '<strong>Issue:</strong> Check browser console (F12) for errors.'}
+                        </p>
+                        <button class="btn btn-secondary" onclick="location.reload()" style="margin-right: 10px;">🔄 Retry</button>
+                        <button class="btn btn-secondary" onclick="window.close()">← Back</button>
+                    </div>
+                `;
+            }
+        }, 3000);
+        
+        // Debug logging
+        console.log('Analytics page loaded');
+        console.log('AnalyticsScoring available:', typeof window.AnalyticsScoring !== 'undefined');
+        
+        // Get data from opener window or localStorage
+        let analyticsData = null;
+        
+        function loadAnalyticsData() {
+            // Try to get data from opener window first
+            if (window.opener && window.opener.resultsData) {
+                return window.opener.resultsData;
+            }
+            
+            // Fallback to localStorage
+            const storedData = localStorage.getItem('analyticsData');
+            if (storedData) {
+                return JSON.parse(storedData);
+            }
+            
+            return null;
+        }
+        
+        function renderCandidate(candidate, containerClass = '') {
+            const scoreClass = candidate.score > 0 ? 'positive' : candidate.score < 0 ? 'negative' : '';
+            
+            return `
+                <div class="candidate-card ${containerClass}">
+                    <span class="score-badge ${scoreClass}">Score: ${candidate.score}</span>
+                    
+                    <div class="field-row">
+                        <div class="field-label">📁 Path:</div>
+                        <div class="field-value path-value">${escapeHtml(candidate.filePath || candidate.path || 'N/A')}</div>
+                    </div>
+                    
+                    <div class="field-row">
+                        <div class="field-label">🏢 Vendor:</div>
+                        <div class="field-value">${escapeHtml(candidate.vendor || 'N/A')}</div>
+                    </div>
+                    
+                    <div class="field-row">
+                        <div class="field-label">📦 Product:</div>
+                        <div class="field-value">${escapeHtml(candidate.productName || 'N/A')}</div>
+                    </div>
+                    
+                    <div class="field-row">
+                        <div class="field-label">🔢 Version:</div>
+                        <div class="field-value">${escapeHtml(candidate.version || 'N/A')}</div>
+                    </div>
+                    
+                    <div class="field-row">
+                        <div class="field-label">💾 Size:</div>
+                        <div class="field-value">${formatBytes(candidate.size)}</div>
+                    </div>
+                    
+                    <div class="field-row">
+                        <div class="field-label">🔐 MD5:</div>
+                        <div class="field-value md5-value">${escapeHtml(candidate.md5 || 'N/A')}</div>
+                    </div>
+                    
+                    ${candidate.scoreDetails ? `
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                            <span class="score-name">Path:</span>
+                            <span class="score-val">${candidate.scoreDetails.pathScore > 0 ? '+' : ''}${candidate.scoreDetails.pathScore}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-name">Vendor:</span>
+                            <span class="score-val">${candidate.scoreDetails.vendorScore > 0 ? '+' : ''}${candidate.scoreDetails.vendorScore}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-name">MD5 Frequency:</span>
+                            <span class="score-val">${candidate.scoreDetails.md5Score > 0 ? '+' : ''}${candidate.scoreDetails.md5Score}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-name">Product:</span>
+                            <span class="score-val">${candidate.scoreDetails.productScore > 0 ? '+' : ''}${candidate.scoreDetails.productScore}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        function displayAnalytics() {
+            try {
+                console.log('displayAnalytics() called');
+                
+                // Check if scoring module is available
+                if (typeof window.AnalyticsScoring === 'undefined') {
+                    console.error('AnalyticsScoring module not available');
+                    document.getElementById('loadingMessage').innerHTML = `
+                        <div style="color: white; text-align: center; padding: 60px;">
+                            <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                            <h2 style="margin-bottom: 15px;">Error Loading Analytics</h2>
+                            <p style="margin-bottom: 10px;">The scoring module (utils/scoring.js) failed to load.</p>
+                            <p style="font-size: 14px; opacity: 0.9;">Please verify the file exists and refresh the page.</p>
+                            <button class="btn btn-secondary" style="margin-top: 20px;" onclick="window.close()">← Back to Results</button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                console.log('Loading analytics data...');
+                const rawData = loadAnalyticsData();
+                console.log('Raw data:', rawData);
+                
+                ole.log('Converting data format...');
+            const candidates = rawData.data.map(item => ({
+                filePath: item.path,
+                vendor: item.vendor,
+                version: item.version,
+                productName: item.productName,
+                md5: item.md5,
+                size: item.size
+            }));
+            console.log('Candidates prepared:', candidates.length);
+            
+            // Analyze results using scoring.js
+            console.log('Running analytics...');
+            const analytics = window.AnalyticsScoring.analyzeResults(candidates);
+            console.log('Analytics complete:', analytic
+                    return;
+                }
+            
+            // Convert data format to match scoring.js expectations
+            const candidates = rawData.data.map(item => ({
+                filePath: item.path,
+                vendor: item.vendor,
+                version: item.version,
+                productName: item.productName,
+                md5: item.md5,
+                size: item.size
+            }));
+            
+            // Analyze results using scoring.js
+            const analytics = window.AnalyticsScoring.analyzeResults(candidates);
+            
+            // Update stats
+            document.getElementById('statTotal').textContent = analytics.totalProcessed;
+            document.getElementById('statValid').textContent = analytics.totalValid;
+            document.getElementById('statIgnored').textContent = analytics.totalIgnored;
+            document.getElementById('statWorst').textContent = analytics.worstCandidates.length;
+            
+            // Best Candidate
+            if (analytics.bestCandidate) {
+                document.getElementById('bestContent').innerHTML = renderCandidate(analytics.bestCandidate, 'best');
+            } else {
+                document.getElementById('bestSection').style.display = 'none';
+            }
+            
+            // Second Best
+            if (analytics.secondBest) {
+                document.getElementById('secondBestContent').innerHTML = renderCandidate(analytics.secondBest, 'second-best');
+            } else {
+                document.getElementById('secondBestSection').style.display = 'none';
+            }
+            
+            // Worst Candidates
+            if (analytics.worstCandidates.length > 0) {
+                document.getElementById('worstContent').innerHTML = analytics.worstCandidates
+                    .map(c => renderCandidate(c, 'worst'))
+                    .join('');
+            } else {
+                document.getElementById('worstContent').innerHTML = '<div class="empty-message">No candidates with negative scores</div>';
+            }
+            
+            // Ignored Candidates
+            if (analytics.ignoredCandidates.length > 0) {
+                document.getElementById('ignoredContent').innerHTML = analytics.ignoredCandidates
+                    .map(c => renderCandidate(c))
+                    .join('');
+            } else {
+                document.getElementById('ignoredContent').innerHTML = '<div class="empty-message">No ignored candidates</div>';
+            }
+            
+            // Full Ranking Table
+            const tbody = document.getElementById('rankingTableBody');
+            tbody.innerHTML = '';
+            
+            analytics.allRanked.forEach((candidate, index) => {
+                const rank = index + 1;
+                let rankBadge = `<span class="rank-badge">#${rank}</span>`;
+                
+                if (rank === 1) {
+                    rankBadge = '<span class="rank-badge gold">🥇 #1</span>';
+                } else if (rank === 2) {
+                    rankBadge = '<span class="rank-badge silver">🥈 #2</span>';
+                } else if (rank === 3) {
+            console.log('Displaying analytics content...');
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('analyticsContent').style.display = 'block';
+            
+            // Update page title
+            document.title = `Analytics - ${rawData.processName || 'Search Results'}`;
+            console.log('Analytics display complete!');
+            
+            } catch (error) {
+                console.error('Error in displayAnalytics:', error);
+                console.error('Stack trace:', error.stack);
+                document.getElementById('loadingMessage').innerHTML = `
+                    <div style="color: white; text-align: center; padding: 60px;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+                        <h2 style="margin-bottom: 15px;">Error Processing Analytics</h2>
+                        <p style="margin-bottom: 10px;">An error occurred while processing the analytics data.</p>
+                        <p style="font-size: 14px; opacity: 0.9; font-family: monospace;">${escapeHtml(error.message)}</p>
+                        <p style="font-size: 12px; opacity: 0.8; margin-top: 15px;">Check the browser console (F12) for more details.</p>
+                        <button class="btn btn-secondary" style="margin-top: 20px;" onclick="window.close()">← Back to Results</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Initialize on page load
+        console.log('Setting up DOMContentLoaded listener...');
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, calling displayAnalytics...');
+            displayAnalytics();
+        }e="font-size: 14px; padding: 4px 12px;">${candidate.score}</span></td>
+                    <td style="font-family: 'Consolas', monospace; font-size: 12px; color: #0066cc;">${escapeHtml(candidate.filePath || 'N/A')}</td>
+                    <td>${escapeHtml(candidate.vendor || 'N/A')}</td>
+                    <td>${escapeHtml(candidate.productName || 'N/A')}</td>
+                    <td>${escapeHtml(candidate.version || 'N/A')}</td>
+                    <td style="font-family: 'Consolas', monospace; font-size: 11px;">${escapeHtml(candidate.md5 || 'N/A')}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Show content, hide loading
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('analyticsContent').style.display = 'block';
+            
+            // Update page title
+            document.title = `Analytics - ${rawData.processName || 'Search Results'}`;
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', displayAnalytics);
+    </script>
+</body>
+</html>

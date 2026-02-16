@@ -368,7 +368,7 @@
                 
                 <div class="results-header">
                     <div class="results-title">📋 File Path Details</div>
-                    <button class="export-btn" onclick="exportToCSV()">💾 Export to CSV</button>
+                    <button class="export-btn" onclick="openAnalytics()">📊 View Analytics</button>
                 </div>
                 
                 <div class="table-container">
@@ -620,6 +620,50 @@
             });
         }
 
+        function openAnalytics() {
+            console.log('openAnalytics() called');
+            console.log('resultsData:', resultsData);
+            
+            if (!resultsData) {
+                alert('No data available for analytics');
+                return;
+            }
+            
+            // Check if we have valid data
+            if (!resultsData.data || resultsData.data.length === 0) {
+                alert('No search results to analyze');
+                return;
+            }
+            
+            console.log('Data validation passed. Total candidates:', resultsData.data.length);
+            
+            // Store data in localStorage for the analytics page to access
+            try {
+                const dataToStore = JSON.stringify(resultsData);
+                console.log('Storing data in localStorage, size:', dataToStore.length, 'bytes');
+                localStorage.setItem('analyticsData', dataToStore);
+                console.log('Data stored successfully');
+                
+                // Verify storage
+                const retrieved = localStorage.getItem('analyticsData');
+                console.log('Verification: Data retrieved from localStorage:', retrieved ? 'Success' : 'Failed');
+                
+                // Open analytics page in a new tab
+                console.log('Opening analytics window...');
+                const analyticsWindow = window.open('analytics.html', '_blank');
+                
+                if (!analyticsWindow) {
+                    alert('Failed to open analytics window. Please allow pop-ups for this site.');
+                } else {
+                    console.log('Analytics window opened successfully');
+                }
+            } catch (error) {
+                console.error('Error opening analytics:', error);
+                console.error('Stack trace:', error.stack);
+                alert('Error opening analytics: ' + error.message);
+            }
+        }
+        
         function exportToCSV() {
             if (!resultsData) return;
             

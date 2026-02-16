@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Test - Sample Data</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .test-btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 10px 10px 10px 0;
+            transition: all 0.2s;
+        }
+        .test-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .test-btn.secondary {
+            background: #6c757d;
+        }
+        .test-btn.secondary:hover {
+            background: #5a6268;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .data-preview {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Analytics Feature Test</h1>
+        <div class="subtitle">Test the analytics feature with sample Dialer.exe search results</div>
+        
+        <div class="info-box">
+            <h3>📋 Test Instructions</h3>
+            <ol>
+                <li>Click "Load Sample Data & View Analytics" to see the analytics with test data</li>
+                <li>The analytics page will open in a new tab</li>
+                <li>Review the scoring and classifications</li>
+                <li>You can also click "View Sample Data" to see what data is being analyzed</li>
+            </ol>
+        </div>
+        
+        <button class="test-btn" onclick="loadSampleDataAndOpenAnalytics()">
+            📊 Load Sample Data & View Analytics
+        </button>
+        
+        <button class="test-btn secondary" onclick="toggleDataPreview()">
+            👁️ View Sample Data
+        </button>
+        
+        <div class="data-preview" id="dataPreview" style="display: none;">
+            <!-- Data will be shown here -->
+        </div>
+    </div>
+
+    <script>
+        // Sample test data representing various scenarios
+        const sampleData = {
+            processName: "Dialer.exe",
+            searchTime: "2.5s",
+            foundOnPage: 3,
+            letter: "D",
+            data: [
+                {
+                    path: "C:\\Windows\\System32\\Dialer.exe",
+                    productName: "Windows Telephony Dialer",
+                    vendor: "Microsoft Corporation",
+                    version: "10.0.19041.1",
+                    size: 98304,
+                    md5: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+                },
+                {
+                    path: "C:\\Program Files\\BSNL 3G\\Dialer.exe",
+                    productName: "BSNL 3G Modem Dialer",
+                    vendor: "BSNL",
+                    version: "2.1.0.5",
+                    size: 524288,
+                    md5: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7"
+                },
+                {
+                    path: "C:\\Program Files (x86)\\Huawei\\Mobile Partner\\Dialer.exe",
+                    productName: "Huawei Mobile Partner Dialer",
+                    vendor: "Huawei Technologies Co., Ltd.",
+                    version: "23.013.09.05.541",
+                    size: 1048576,
+                    md5: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8"
+                },
+                {
+                    path: "C:\\Users\\Admin\\Desktop\\Dialer.exe",
+                    productName: "Unknown Dialer",
+                    vendor: "Unknown",
+                    version: "1.0.0.0",
+                    size: 45056,
+                    md5: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9"
+                },
+                {
+                    path: "D:\\Dialer.exe",
+                    productName: "Generic Dialer",
+                    vendor: "N/A",
+                    version: "0.0.0.0",
+                    size: 32768,
+                    md5: "e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
+                },
+                {
+                    path: "C:\\Program Files\\VMware\\VMware Tools\\Dialer.exe",
+                    productName: "VMware Network Dialer",
+                    vendor: "VMware Inc.",
+                    version: "11.0.5",
+                    size: 204800,
+                    md5: "f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1"
+                },
+                {
+                    path: "E:\\Backup\\Tools\\Dialer.exe",
+                    productName: "USB Modem Dialer",
+                    vendor: "Qualcomm Incorporated",
+                    version: "4.2.1.0",
+                    size: 163840,
+                    md5: "g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2"
+                },
+                {
+                    path: "C:\\Windows\\System32\\Dialer.exe",
+                    productName: "Windows Telephony Dialer",
+                    vendor: "Microsoft Corporation",
+                    version: "10.0.19041.1",
+                    size: 98304,
+                    md5: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+                },
+                {
+                    path: "C:\\Users\\Admin\\Documents\\Downloads\\Dialer.exe",
+                    productName: "Free Internet Dialer",
+                    vendor: "Crack Tools Inc.",
+                    version: "2.0",
+                    size: 51200,
+                    md5: "h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3"
+                },
+                {
+                    path: "C:\\Program Files (x86)\\Visiontek\\3G Manager\\Dialer.exe",
+                    productName: "Visiontek 3G Dialer Application",
+                    vendor: "Visiontek",
+                    version: "1.5.3.2",
+                    size: 409600,
+                    md5: "i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4"
+                }
+            ]
+        };
+        
+        function loadSampleDataAndOpenAnalytics() {
+            // Store sample data in localStorage
+            localStorage.setItem('analyticsData', JSON.stringify(sampleData));
+            
+            // Open analytics page
+            window.open('analytics.html', '_blank');
+        }
+        
+        function toggleDataPreview() {
+            const preview = document.getElementById('dataPreview');
+            
+            if (preview.style.display === 'none') {
+                preview.style.display = 'block';
+                preview.innerHTML = `
+                    <strong>Sample Data Structure:</strong><br><br>
+                    Process Name: ${sampleData.processName}<br>
+                    Total Candidates: ${sampleData.data.length}<br><br>
+                    <strong>Candidates:</strong><br>
+                    ${JSON.stringify(sampleData, null, 2)}
+                `;
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

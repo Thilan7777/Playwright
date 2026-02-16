@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics System Verification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .check-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .check-item.pass {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .check-item.fail {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .check-item .icon {
+            font-size: 24px;
+        }
+        .check-item .label {
+            flex: 1;
+            font-weight: 600;
+        }
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 10px 10px 0 0;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+        .btn.secondary {
+            background: #6c757d;
+        }
+        .btn.success {
+            background: #28a745;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Analytics System Verification</h1>
+        
+        <div id="checks">
+            <div class="check-item" id="check1">
+                <div class="icon">⏳</div>
+                <div class="label">Checking scoring.js module...</div>
+            </div>
+            <div class="check-item" id="check2">
+                <div class="icon">⏳</div>
+                <div class="label">Checking AnalyticsScoring functions...</div>
+            </div>
+            <div class="check-item" id="check3">
+                <div class="icon">⏳</div>
+                <div class="label">Testing score calculation...</div>
+            </div>
+            <div class="check-item" id="check4">
+                <div class="icon">⏳</div>
+                <div class="label">Testing full analysis...</div>
+            </div>
+        </div>
+        
+        <div id="results" style="margin-top: 30px;"></div>
+        
+        <div style="margin-top: 30px;">
+            <button class="btn success" id="testBtn" onclick="runFullTest()" disabled>🧪 Run Full Test</button>
+            <a href="analytics.html" class="btn" target="_blank">📊 Open Analytics Page</a>
+            <a href="test-analytics.html" class="btn secondary" target="_blank">🧪 Open Sample Test</a>
+        </div>
+        
+        <div class="info" style="margin-top: 30px;">
+            <strong>📝 File Structure Check:</strong>
+            <pre>Root Directory/
+├── analytics.html
+├── results.html
+├── test-analytics.html
+├── verify-analytics.html (this file)
+└── utils/
+    ├── scoring.js ✓
+    └── scoring-examples.js</pre>
+        </div>
+    </div>
+
+    <script src="utils/scoring.js"></script>
+    <script>
+        let allChecksPassed = false;
+        
+        function updateCheck(id, pass, message) {
+            const check = document.getElementById(id);
+            check.className = `check-item ${pass ? 'pass' : 'fail'}`;
+            check.innerHTML = `
+                <div class="icon">${pass ? '✅' : '❌'}</div>
+                <div class="label">${message}</div>
+            `;
+        }
+        
+        function verifySystem() {
+            let allPassed = true;
+            const results = [];
+            
+            // Check 1: scoring.js loaded
+            if (typeof window.AnalyticsScoring !== 'undefined') {
+                updateCheck('check1', true, 'scoring.js module loaded successfully');
+                results.push('✅ scoring.js is properly linked and loaded');
+            } else {
+                updateCheck('check1', false, 'scoring.js module NOT found - check file path');
+                results.push('❌ scoring.js failed to load from utils/scoring.js');
+                allPassed = false;
+                
+                document.getElementById('results').innerHTML = `
+                    <div style="background: #f8d7da; padding: 20px; border-radius: 5px; border-left: 4px solid #dc3545;">
+                        <h3 style="margin-top: 0; color: #721c24;">❌ Critical Error</h3>
+                        <p>The scoring.js file could not be loaded. Please verify:</p>
+                        <ul>
+                            <li>File exists at: <code>utils/scoring.js</code></li>
+                            <li>Path is accessible from the HTML file</li>
+                            <li>No JavaScript errors in the console</li>
+                        </ul>
+                        <p><strong>Press F12</strong> to open Developer Console and check for errors.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Check 2: Functions exist
+            const requiredFunctions = ['calculateScore', 'analyzeResults', 'buildMD5FrequencyMap', 'shouldIgnore'];
+            const missingFunctions = [];
+            
+            requiredFunctions.forEach(func => {
+                if (typeof window.AnalyticsScoring[func] !== 'function') {
+                    missingFunctions.push(func);
+                }
+            });
+            
+            if (missingFunctions.length === 0) {
+                updateCheck('check2', true, 'All required functions are available');
+                results.push('✅ All functions exported correctly: ' + requiredFunctions.join(', '));
+            } else {
+                updateCheck('check2', false, 'Missing functions: ' + missingFunctions.join(', '));
+                results.push('❌ Missing functions: ' + missingFunctions.join(', '));
+                allPassed = false;
+            }
+            
+            // Check 3: Test score calculation
+            try {
+                const testCandidate = {
+                    filePath: "C:\\Windows\\System32\\test.exe",
+                    vendor: "Microsoft Corporation",
+                    productName: "Test Dialer",
+                    md5: "test123",
+                    size: 1000
+                };
+                
+                const md5Map = new Map();
+                const result = window.AnalyticsScoring.calculateScore(testCandidate, md5Map);
+                
+                if (result && typeof result.score === 'number' && result.details) {
+                    updateCheck('check3', true, `Score calculation works (test score: ${result.score})`);
+                    results.push(`✅ Test score calculated: ${result.score} (Path: +${result.details.pathScore}, Vendor: +${result.details.vendorScore}, Product: +${result.details.productScore})`);
+                } else {
+                    throw new Error('Invalid result structure');
+                }
+            } catch (error) {
+                updateCheck('check3', false, 'Score calculation failed: ' + error.message);
+                results.push('❌ Error in calculateScore: ' + error.message);
+                allPassed = false;
+            }
+            
+            // Check 4: Test full analysis
+            try {
+                const testCandidates = [
+                    {
+                        filePath: "C:\\Windows\\System32\\Dialer.exe",
+                        vendor: "Microsoft Corporation",
+                        productName: "Windows Dialer",
+                        md5: "abc123",
+                        size: 100000
+                    },
+                    {
+                        filePath: "C:\\Users\\Admin\\Desktop\\Dialer.exe",
+                        vendor: "Unknown",
+                        productName: "Test",
+                        md5: "def456",
+                        size: 50000
+                    }
+                ];
+                
+                const analytics = window.AnalyticsScoring.analyzeResults(testCandidates);
+                
+                if (analytics && analytics.bestCandidate && analytics.allRanked) {
+                    updateCheck('check4', true, `Full analysis works (${analytics.totalValid} valid, ${analytics.totalIgnored} ignored)`);
+                    results.push(`✅ Analysis complete: ${analytics.totalProcessed} candidates processed`);
+                    results.push(`   - Best candidate score: ${analytics.bestCandidate.score}`);
+                    results.push(`   - Valid: ${analytics.totalValid}, Ignored: ${analytics.totalIgnored}`);
+                } else {
+                    throw new Error('Invalid analysis result structure');
+                }
+            } catch (error) {
+                updateCheck('check4', false, 'Full analysis failed: ' + error.message);
+                results.push('❌ Error in analyzeResults: ' + error.message);
+                allPassed = false;
+            }
+            
+            // Display results
+            if (allPassed) {
+                allChecksPassed = true;
+                document.getElementById('testBtn').disabled = false;
+                document.getElementById('results').innerHTML = `
+                    <div style="background: #d4edda; padding: 20px; border-radius: 5px; border-left: 4px solid #28a745;">
+                        <h3 style="margin-top: 0; color: #155724;">✅ All Checks Passed!</h3>
+                        <p style="margin-bottom: 15px;"><strong>The Analytics system is properly linked and functional.</strong></p>
+                        <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                            <strong>Verification Details:</strong>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                ${results.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <p style="margin-top: 15px; margin-bottom: 0;">
+                            <strong>✅ Ready to use!</strong> You can now:
+                        </p>
+                        <ul style="margin-top: 10px;">
+                            <li>Click "Run Full Test" above to test with sample data</li>
+                            <li>Click "Open Sample Test" to see analytics with test data</li>
+                            <li>Or use "View Analytics" button from your actual search results</li>
+                        </ul>
+                    </div>
+                `;
+            } else {
+                document.getElementById('results').innerHTML = `
+                    <div style="background: #f8d7da; padding: 20px; border-radius: 5px; border-left: 4px solid #dc3545;">
+                        <h3 style="margin-top: 0; color: #721c24;">❌ Some Checks Failed</h3>
+                        <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                            <strong>Results:</strong>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                ${results.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <p style="margin-top: 15px;">
+                            <strong>Troubleshooting:</strong> Open browser console (F12) to check for errors.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+        
+        function runFullTest() {
+            if (!allChecksPassed) {
+                alert('Please verify the system first');
+                return;
+            }
+            
+            // Redirect to sample test page
+            window.location.href = 'test-analytics.html';
+        }
+        
+        // Run verification on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(verifySystem, 500);
+        });
+    </script>
+</body>
+</html>

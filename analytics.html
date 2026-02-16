@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 25px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .candidate-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+        
+        .candidate-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .candidate-card.best {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-color: #fdcb6e;
+        }
+        
+        .candidate-card.second-best {
+            background: linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%);
+            border-color: #b2bec3;
+        }
+        
+        .candidate-card.worst {
+            background: linear-gradient(135deg, #fab1a0 0%, #ff7675 100%);
+            border-color: #ff7675;
+        }
+        
+        .score-badge {
+            display: inline-block;
+            background: #333;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+        
+        .score-badge.positive {
+            background: #28a745;
+        }
+        
+        .score-badge.negative {
+            background: #dc3545;
+        }
+        
+        .field-row {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .field-label {
+            font-weight: 600;
+            color: #555;
+            min-width: 120px;
+        }
+        
+        .field-value {
+            color: #333;
+            word-break: break-word;
+            flex: 1;
+        }
+        
+        .path-value {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            color: #0066cc;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .md5-value {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .score-breakdown {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .score-item {
+            font-size: 13px;
+        }
+        
+        .score-item .score-name {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .score-item .score-val {
+            color: #333;
+            font-weight: 700;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        thead {
+            background: #f8f9fa;
+        }
+        
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #dee2e6;
+            color: #333;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .rank-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        
+        .rank-badge.gold {
+            background: #ffd700;
+            color: #333;
+        }
+        
+        .rank-badge.silver {
+            background: #c0c0c0;
+            color: #333;
+        }
+        
+        .rank-badge.bronze {
+            background: #cd7f32;
+            color: white;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .toggle-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .toggle-section .btn {
+            font-size: 16px;
+            padding: 15px 35px;
+        }
+        
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .empty-message::before {
+            content: '📭';
+            font-size: 48px;
+            display: block;
+            margin-bottom: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .loading::before {
+            content: '⏳';
+            font-size: 64px;
+            display: block;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loadingMessage" class="loading">
+            <div>Loading analytics...</div>
+        </div>
+        
+        <div id="analyticsContent" style="display: none;">
+            <div class="header">
+                <h1>📊 Search Results Analytics</h1>
+                <div class="subtitle">Intelligent ranking and classification of search candidates</div>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="label">Total Candidates</div>
+                    <div class="value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Valid Candidates</div>
+                    <div class="value" id="statValid">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Ignored</div>
+                    <div class="value" id="statIgnored">0</div>
+                </div>
+            </div>
+            
+            <div class="section" id="bestCandidateSection">
+                <div class="section-header">🏆 Best Candidate</div>
+                <div id="bestCandidateContent"></div>
+            </div>
+            
+            <div class="section" id="secondBestSection">
+                <div class="section-header">🥈 Second Best Candidate</div>
+                <div id="secondBestContent"></div>
+            </div>
+            
+            <div class="toggle-section">
+                <button class="btn btn-primary" onclick="toggleFullRanking()" id="toggleRankingBtn">
+                    📊 View Full Ranking Table
+                </button>
+            </div>
+            
+            <div class="section" id="fullRankingSection" style="display: none;">
+                <div class="section-header">📊 Full Ranking Table</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Score</th>
+                                <th>Path</th>
+                                <th>Vendor</th>
+                                <th>Product Name</th>
+                                <th>Version</th>
+                                <th>MD5</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankingTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Print Report</button>
+                <button class="btn btn-secondary" onclick="window.close()">← Back to Results</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // INLINE SCORING LOGIC (Enhanced for robustness)
+        // ============================================
+        
+        function calculatePathScore(path) {
+            const pathUpper = path.toUpperCase();
+            let score = 0;
+            
+            // Base location scoring
+            if (pathUpper.includes('C:\\WINDOWS\\SYSTEM32')) {
+                score = 50;
+            } else if (pathUpper.includes('C:\\PROGRAM FILES (X86)')) {
+                score = 35;
+            } else if (pathUpper.includes('C:\\PROGRAM FILES')) {
+                score = 40;
+            } else if (/^[D-Z]:\\/i.test(path)) {
+                score = 10;
+            }
+            
+            // Suspicious location penalties
+            if (pathUpper.includes('DESKTOP') || pathUpper.includes('DOCUMENTS')) {
+                score = -40;
+            }
+            if (pathUpper.includes('\\TEMP\\') || pathUpper.includes('\\TMP\\')) {
+                score -= 30;
+            }
+            if (pathUpper.includes('\\APPDATA\\')) {
+                score -= 15;
+            }
+            
+            // Suspicious filename modifications
+            const filename = path.split('\\').pop() || '';
+            if (/dialer\s*\(\d+\)\.exe/i.test(filename) || 
+                /dialer[_-]copy\.exe/i.test(filename) ||
+                /dialer[_-]backup\.exe/i.test(filename)) {
+                score -= 20;
+            }
+            
+            return score;
+        }
+        
+        function calculateVendorScore(vendor) {
+            const vendorUpper = vendor.toUpperCase();
+            
+            // Microsoft with potential digital signature indicator
+            if (vendorUpper.includes('MICROSOFT')) {
+                // If vendor string suggests digital signature, give extra points
+                if (vendorUpper.includes('CORPORATION') || vendorUpper.includes('CORP.')) {
+                    return 45;
+                }
+                return 40;
+            }
+            
+            // Known modem brands
+            const modemBrands = ['BSNL', 'MTNL', 'VISIONTEK', 'HUAWEI', 'ZTE', 'QUALCOMM', 
+                                'SIERRA WIRELESS', 'NOVATEL', 'ERICSSON', 'ALCATEL', 'TELIT', 'U-BLOX'];
+            for (const brand of modemBrands) {
+                if (vendorUpper.includes(brand)) {
+                    return 25;
+                }
+            }
+            
+            // Explicit suspicious keywords (high penalty)
+            const explicitSuspicious = ['CRACK', 'KEYGEN', 'PATCH', 'LOADER', 'PIRATE', 
+                                       'WAREZ', 'NULLED', 'CRACKED', 'HACKED'];
+            for (const suspicious of explicitSuspicious) {
+                if (vendorUpper.includes(suspicious)) {
+                    return -25;
+                }
+            }
+            
+            // Unknown/empty vendor (mild penalty)
+            if (!vendor || vendor.trim() === '' || 
+                vendorUpper === 'UNKNOWN' || vendorUpper === 'N/A' || vendorUpper === 'NONE') {
+                return -5;
+            }
+            
+            return 0;
+        }
+        
+        function calculateMD5Score(md5, md5FrequencyMap, allCandidates) {
+            if (!md5 || !md5FrequencyMap) return 0;
+            
+            const frequency = md5FrequencyMap.get(md5) || 1;
+            
+            // Enhanced logic: Only reward high frequency if at least one instance is in trusted location
+            if (frequency > 5) {
+                // Check if ANY instance with this MD5 is in a trusted location
+                const trustedLocations = ['C:\\WINDOWS\\SYSTEM32', 'C:\\PROGRAM FILES', 'C:\\PROGRAM FILES (X86)'];
+                const hasInstanceInTrustedLocation = allCandidates.some(candidate => {
+                    if (candidate.md5 === md5) {
+                        const pathUpper = (candidate.filePath || '').toUpperCase();
+                        return trustedLocations.some(loc => pathUpper.includes(loc));
+                    }
+                    return false;
+                });
+                
+                if (hasInstanceInTrustedLocation) {
+                    return 30;
+                } else {
+                    // High frequency but only in suspicious locations - reduced reward
+                    return 5;
+                }
+            }
+            
+            if (frequency >= 2 && frequency <= 5) {
+                return 15;
+            }
+            
+            return 0;
+        }
+        
+        function calculateProductScore(productName) {
+            const productUpper = productName.toUpperCase();
+            
+            // Relevant products (positive)
+            const relevantKeywords = ['DIALER', 'MODEM', '3G', '4G', 'USB', 'WWAN', 'MOBILE BROADBAND', 'TELEPHONY'];
+            for (const keyword of relevantKeywords) {
+                if (productUpper.includes(keyword)) {
+                    return 20;
+                }
+            }
+            
+            // Unrelated software (negative)
+            const unrelatedKeywords = ['VMWARE', 'NERO', 'OFFICE', 'WORD', 'EXCEL', 'POWERPOINT', 
+                                      'ANTIVIRUS', 'KASPERSKY', 'NORTON', 'MCAFEE', 'AVAST', 'AVG', 
+                                      'PHOTOSHOP', 'ACROBAT', 'CHROME', 'FIREFOX', 'INTERNET EXPLORER', 
+                                      'EDGE', 'STEAM', 'GAMING'];
+            for (const keyword of unrelatedKeywords) {
+                if (productUpper.includes(keyword)) {
+                    return -30;
+                }
+            }
+            
+            return 0;
+        }
+        
+        function calculateSignatureScore(candidate) {
+            // Note: In a real implementation, you would check actual digital signature
+            // For now, we use heuristics based on vendor and path
+            
+            const vendor = (candidate.vendor || '').toUpperCase();
+            const path = (candidate.filePath || '').toUpperCase();
+            
+            // Heuristic: If it's Microsoft in System32, likely digitally signed
+            if (vendor.includes('MICROSOFT') && path.includes('C:\\WINDOWS\\SYSTEM32')) {
+                return 30; // Assume valid signature
+            }
+            
+            // Known legitimate vendors in Program Files
+            const trustedVendors = ['MICROSOFT', 'HUAWEI', 'ZTE', 'QUALCOMM', 'SIERRA WIRELESS'];
+            const inProgramFiles = path.includes('C:\\PROGRAM FILES');
+            
+            if (inProgramFiles && trustedVendors.some(v => vendor.includes(v))) {
+                return 30; // Assume valid signature
+            }
+            
+            // Suspicious indicators that suggest no signature or invalid
+            const suspiciousKeywords = ['CRACK', 'KEYGEN', 'PATCH', 'UNKNOWN'];
+            if (suspiciousKeywords.some(k => vendor.includes(k))) {
+                return -20; // Invalid or no signature
+            }
+            
+            // No clear indication
+            return 0;
+        }
+        
+        function getConfidenceLabel(score) {
+            if (score >= 100) return 'Highly Legitimate';
+            if (score >= 70) return 'Likely Legitimate';
+            if (score >= 30) return 'Uncertain';
+            if (score >= 0) return 'Suspicious';
+            return 'Highly Suspicious';
+        }
+        
+        function calculateTotalScore(candidate, md5FrequencyMap, allCandidates) {
+            const pathScore = calculatePathScore(candidate.filePath || '');
+            const vendorScore = calculateVendorScore(candidate.vendor || '');
+            const md5Score = calculateMD5Score(candidate.md5, md5FrequencyMap, allCandidates);
+            const productScore = calculateProductScore(candidate.productName || '');
+            const signatureScore = calculateSignatureScore(candidate);
+            
+            const totalScore = pathScore + vendorScore + md5Score + productScore + signatureScore;
+            const confidenceLabel = getConfidenceLabel(totalScore);
+            
+            return {
+                totalScore,
+                confidenceLabel,
+                breakdown: {
+                    pathScore,
+                    vendorScore,
+                    md5Score,
+                    productScore,
+                    signatureScore
+                }
+            };
+        }
+        
+        function calculateScore(candidate, md5FrequencyMap, allCandidates) {
+            const result = calculateTotalScore(candidate, md5FrequencyMap, allCandidates);
+            return {
+                score: result.totalScore,
+                details: result.breakdown,
+                confidenceLabel: result.confidenceLabel
+            };
+        }
+        
+        function buildMD5FrequencyMap(candidates) {
+            const md5Map = new Map();
+            candidates.forEach(candidate => {
+                if (candidate.md5) {
+                    md5Map.set(candidate.md5, (md5Map.get(candidate.md5) || 0) + 1);
+                }
+            });
+            return md5Map;
+        }
+        
+        function shouldIgnore(candidate) {
+            const path = (candidate.filePath || '').toUpperCase();
+            if (path.includes('DESKTOP')) return true;
+            if (/^[D-Z]:\\[^\\]+\.exe$/i.test(candidate.filePath)) return true;
+            if (!candidate.vendor || candidate.vendor.trim() === '' ||
+                !candidate.productName || candidate.productName.trim() === '' ||
+                !candidate.md5 || candidate.md5.trim() === '') return true;
+            return false;
+        }
+        
+        function analyzeResults(candidates) {
+            const md5FrequencyMap = buildMD5FrequencyMap(candidates);
+            const scoredCandidates = candidates.map(candidate => {
+                const scoreResult = calculateScore(candidate, md5FrequencyMap, candidates);
+                return {
+                    ...candidate,
+                    score: scoreResult.score,
+                    scoreDetails: scoreResult.details,
+                    confidenceLabel: scoreResult.confidenceLabel,
+                    ignored: shouldIgnore(candidate)
+                };
+            });
+            
+            const validCandidates = scoredCandidates.filter(c => !c.ignored);
+            const ignoredCandidates = scoredCandidates.filter(c => c.ignored);
+            validCandidates.sort((a, b) => b.score - a.score);
+            
+            return {
+                bestCandidate: validCandidates.length > 0 ? validCandidates[0] : null,
+                secondBest: validCandidates.length > 1 ? validCandidates[1] : null,
+                worstCandidates: validCandidates.filter(c => c.score < 0),
+                ignoredCandidates,
+                allRanked: validCandidates,
+                totalProcessed: candidates.length,
+                totalValid: validCandidates.length,
+                totalIgnored: ignoredCandidates.length
+            };
+        }
+        
+        // ============================================
+        // UI RENDERING FUNCTIONS
+        // ============================================
+        
+        function toggleFullRanking() {
+            const section = document.getElementById('fullRankingSection');
+            const btn = document.getElementById('toggleRankingBtn');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                btn.innerHTML = '🔼 Hide Full Ranking Table';
+                // Scroll to the table
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                section.style.display = 'none';
+                btn.innerHTML = '📊 View Full Ranking Table';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        function renderCandidate(candidate, containerClass = '') {
+            const scoreClass = candidate.score > 0 ? 'positive' : candidate.score < 0 ? 'negative' : '';
+            
+            // Confidence badge styling
+            let confidenceBadge = '';
+            if (candidate.confidenceLabel) {
+                let badgeColor = '#6c757d'; // default gray
+                if (candidate.confidenceLabel === 'Highly Legitimate') badgeColor = '#28a745';
+                else if (candidate.confidenceLabel === 'Likely Legitimate') badgeColor = '#17a2b8';
+                else if (candidate.confidenceLabel === 'Uncertain') badgeColor = '#ffc107';
+                else if (candidate.confidenceLabel === 'Suspicious') badgeColor = '#fd7e14';
+                else if (candidate.confidenceLabel === 'Highly Suspicious') badgeColor = '#dc3545';
+                
+                confidenceBadge = `<span class="score-badge" style="background: ${badgeColor}; margin-left: 10px; font-size: 14px; padding: 6px 12px;">${candidate.confidenceLabel}</span>`;
+            }
+            
+            return `
+                <div class="candidate-card ${containerClass}">
+                    <div style="margin-bottom: 12px;">
+                        <span class="score-badge ${scoreClass}">Score: ${candidate.score}</span>
+                        ${confidenceBadge}
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">📁 Path:</div>
+                        <div class="field-value path-value">${escapeHtml(candidate.filePath || candidate.path || 'N/A')}</div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">🏢 Vendor:</div>
+                        <div class="field-value">${escapeHtml(candidate.vendor || 'N/A')}</div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">📦 Product:</div>
+                        <div class="field-value">${escapeHtml(candidate.productName || 'N/A')}</div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">🔢 Version:</div>
+                        <div class="field-value">${escapeHtml(candidate.version || 'N/A')}</div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">💾 Size:</div>
+                        <div class="field-value">${formatBytes(candidate.size)}</div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-label">🔐 MD5:</div>
+                        <div class="field-value md5-value">${escapeHtml(candidate.md5 || 'N/A')}</div>
+                    </div>
+                    ${candidate.scoreDetails ? `
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                            <span class="score-name">Path:</span>
+                            <span class="score-val">${candidate.scoreDetails.pathScore > 0 ? '+' : ''}${candidate.scoreDetails.pathScore}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-name">Vendor:</span>
+                            <span class="score-val">${candidate.scoreDetails.vendorScore > 0 ? '+' : ''}${candidate.scoreDetails.vendorScore}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-name">MD5 Frequency:</span>
+                            <span class="score-val">${candidate.scoreDetails.md5Score > 0 ? '+' : ''}${candidate.scoreDetails.md5Score}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-name">Product:</span>
+                            <span class="score-val">${candidate.scoreDetails.productScore > 0 ? '+' : ''}${candidate.scoreDetails.productScore}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-name">Signature:</span>
+                            <span class="score-val">${candidate.scoreDetails.signatureScore > 0 ? '+' : ''}${candidate.scoreDetails.signatureScore}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        // ============================================
+        // MAIN DISPLAY FUNCTION
+        // ============================================
+        
+        function displayAnalytics() {
+            console.log('🚀 displayAnalytics() started');
+            
+            try {
+                // Load data
+                let rawData = null;
+                
+                // Try localStorage first (most reliable with file:// protocol)
+                console.log('📦 Checking localStorage...');
+                const storedData = localStorage.getItem('analyticsData');
+                if (storedData) {
+                    console.log('✅ Data found in localStorage');
+                    rawData = JSON.parse(storedData);
+                } else {
+                    console.log('⚠️ No data in localStorage, trying opener window...');
+                    // Try opener window as fallback (only works with http://)
+                    try {
+                        if (window.opener && window.opener.resultsData) {
+                            console.log('✅ Data found in opener window');
+                            rawData = window.opener.resultsData;
+                        } else {
+                            console.log('❌ No opener data available');
+                        }
+                    } catch (openerError) {
+                        console.log('⚠️ Cannot access opener (CORS restriction):', openerError.message);
+                    }
+                }
+                
+                if (!rawData || !rawData.data || rawData.data.length === 0) {
+                    console.log('❌ No valid data available');
+                    document.getElementById('loadingMessage').innerHTML = `
+                        <div style="color: white; text-align: center; padding: 60px;">
+                            <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
+                            <h2 style="margin-bottom: 15px;">No Data Available</h2>
+                            <p style="margin-bottom: 10px;">No search results data found for analytics.</p>
+                            <p style="font-size: 14px; opacity: 0.9;">Please run a search first, then click "View Analytics".</p>
+                            <button class="btn btn-secondary" style="margin-top: 20px;" onclick="window.close()">← Back to Results</button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                console.log('✅ Data loaded:', rawData.data.length, 'candidates');
+                
+                // Convert data format
+                const candidates = rawData.data.map(item => ({
+                    filePath: item.path,
+                    vendor: item.vendor,
+                    version: item.version,
+                    productName: item.productName,
+                    md5: item.md5,
+                    size: item.size
+                }));
+                
+                console.log('✅ Candidates converted');
+                
+                // Analyze
+                const analytics = analyzeResults(candidates);
+                console.log('✅ Analysis complete:', analytics);
+                
+                // Update stats
+                document.getElementById('statTotal').textContent = analytics.totalProcessed;
+                document.getElementById('statValid').textContent = analytics.totalValid;
+                document.getElementById('statIgnored').textContent = analytics.totalIgnored;
+                
+                // Render sections
+                if (analytics.bestCandidate) {
+                    document.getElementById('bestCandidateContent').innerHTML = renderCandidate(analytics.bestCandidate, 'best-candidate');
+                } else {
+                    document.getElementById('bestCandidateSection').style.display = 'none';
+                }
+                
+                if (analytics.secondBest) {
+                    document.getElementById('secondBestContent').innerHTML = renderCandidate(analytics.secondBest, 'second-best');
+                } else {
+                    document.getElementById('secondBestSection').style.display = 'none';
+                }
+                
+                // Render table
+                const tbody = document.getElementById('rankingTableBody');
+                tbody.innerHTML = '';
+                analytics.allRanked.forEach((candidate, index) => {
+                    const rank = index + 1;
+                    let rankBadge = `<span class="rank-badge">#${rank}</span>`;
+                    if (rank === 1) rankBadge = '<span class="rank-badge gold">🥇 #1</span>';
+                    else if (rank === 2) rankBadge = '<span class="rank-badge silver">🥈 #2</span>';
+                    else if (rank === 3) rankBadge = '<span class="rank-badge bronze">🥉 #3</span>';
+                    
+                    const scoreClass = candidate.score > 0 ? 'positive' : candidate.score < 0 ? 'negative' : '';
+                    
+                    // Confidence label with color
+                    let confidenceHTML = '';
+                    if (candidate.confidenceLabel) {
+                        let confColor = '#666';
+                        if (candidate.confidenceLabel === 'Highly Legitimate') confColor = '#28a745';
+                        else if (candidate.confidenceLabel === 'Likely Legitimate') confColor = '#17a2b8';
+                        else if (candidate.confidenceLabel === 'Uncertain') confColor = '#856404';
+                        else if (candidate.confidenceLabel === 'Suspicious') confColor = '#d63031';
+                        else if (candidate.confidenceLabel === 'Highly Suspicious') confColor = '#c0392b';
+                        
+                        confidenceHTML = `<span style="color: ${confColor}; font-weight: 600; font-size: 11px; margin-left: 5px;">${candidate.confidenceLabel}</span>`;
+                    }
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${rankBadge}</td>
+                        <td>
+                            <span class="score-badge ${scoreClass}" style="font-size: 14px; padding: 4px 12px;">${candidate.score}</span>
+                            ${confidenceHTML}
+                        </td>
+                        <td style="font-family: 'Consolas', monospace; font-size: 12px; color: #0066cc;">${escapeHtml(candidate.filePath || 'N/A')}</td>
+                        <td>${escapeHtml(candidate.vendor || 'N/A')}</td>
+                        <td>${escapeHtml(candidate.productName || 'N/A')}</td>
+                        <td>${escapeHtml(candidate.version || 'N/A')}</td>
+                        <td style="font-family: 'Consolas', monospace; font-size: 11px;">${escapeHtml(candidate.md5 || 'N/A')}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                // Show content
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('analyticsContent').style.display = 'block';
+                document.title = `Analytics - ${rawData.processName || 'Search Results'}`;
+                
+                console.log('✅ Display complete!');
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('loadingMessage').innerHTML = `
+                    <div style="color: white; text-align: center; padding: 60px;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+                        <h2 style="margin-bottom: 15px;">Error Processing Analytics</h2>
+                        <p style="margin-bottom: 10px;">An error occurred while processing the analytics data.</p>
+                        <p style="font-size: 14px; opacity: 0.9; font-family: monospace;">${escapeHtml(error.message)}</p>
+                        <p style="font-size: 12px; opacity: 0.8; margin-top: 15px;">Check the browser console (F12) for more details.</p>
+                        <button class="btn btn-secondary" style="margin-top: 20px;" onclick="window.close()">← Back to Results</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        
+        console.log('📄 Analytics page script loaded');
+        console.log('⏰ Document ready state:', document.readyState);
+        
+        // Run immediately if DOM is ready, otherwise wait
+        if (document.readyState === 'loading') {
+            console.log('⏳ Waiting for DOM...');
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('✅ DOM ready, starting analytics...');
+                displayAnalytics();
+            });
+        } else {
+            console.log('✅ DOM already ready, starting analytics immediately...');
+            // Use setTimeout to ensure everything is rendered
+            setTimeout(displayAnalytics, 100);
+        }
+    </script>
+</body>
+</html>
