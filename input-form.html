@@ -21,7 +21,8 @@
         }
         .window {
             background: white;
-            width: 480px;
+            width: 100%;
+            max-width: 600px;
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             overflow: hidden;
@@ -115,11 +116,11 @@
             border-color: #ccc;
             cursor: not-allowed;
         }
-        #cancelBtn {
+        #clearBtn {
             background: white;
             color: #333;
         }
-        #cancelBtn:hover {
+        #clearBtn:hover {
             background: #f0f0f0;
         }
         #status {
@@ -234,7 +235,7 @@
                 </div>
                 
                 <div class="button-group">
-                    <button type="button" id="cancelBtn">Cancel</button>
+                    <button type="button" id="clearBtn">Clear</button>
                     <button type="submit" id="submitBtn">Search Process</button>
                 </div>
                 
@@ -254,7 +255,7 @@
         const form = document.getElementById('searchForm');
         const input = document.getElementById('processName');
         const submitBtn = document.getElementById('submitBtn');
-        const cancelBtn = document.getElementById('cancelBtn');
+        const clearBtn = document.getElementById('clearBtn');
         const status = document.getElementById('status');
         
         // Flag to prevent premature submission (e.g., from browser auto-restore)
@@ -293,13 +294,12 @@
             // Disable form
             input.disabled = true;
             submitBtn.disabled = true;
-            cancelBtn.disabled = true;
+            clearBtn.disabled = true;
         });
 
-        cancelBtn.addEventListener('click', () => {
-            window.processName = 'CANCELLED';
-            document.title = 'CANCELLED';
-            window.close();
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            input.focus();
         });
 
         // Auto-focus input on load and reset form state
@@ -317,7 +317,7 @@
             // Re-enable form controls
             input.disabled = false;
             submitBtn.disabled = false;
-            cancelBtn.disabled = false;
+            clearBtn.disabled = false;
             
             // Hide status message
             status.className = '';

@@ -10,18 +10,24 @@
             padding: 0;
             box-sizing: border-box;
         }
+        html {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f0f0;
-            padding: 20px;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white;
         }
         .window {
+            width: 100%;
             background: white;
-            max-width: 1400px;
-            margin: 0 auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            overflow: hidden;
+            border-radius: 0;
+            box-shadow: none;
         }
         .title-bar {
             background: #0078d4;
@@ -44,6 +50,25 @@
         }
         .content {
             padding: 30px;
+        }
+        @media (max-width: 900px) {
+            .content {
+                padding: 18px;
+            }
+        }
+        @media (max-width: 600px) {
+            .content {
+                padding: 12px;
+            }
+            .summary-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .window {
+                border-radius: 0;
+                box-shadow: none;
+            }
         }
         .summary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -168,7 +193,6 @@
             color: #666;
         }
         .path-cell {
-            max-width: 350px;
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
             color: #0066cc;
@@ -177,7 +201,6 @@
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 11px;
             color: #666;
-            max-width: 250px;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -276,8 +299,8 @@
         .process-btn {
             background: white;
             border: 1px solid #ccc;
-            padding: 4px 10px;
-            border-radius: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
             font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
@@ -456,7 +479,32 @@
                     const isActive = proc.toLowerCase() === data.processName.toLowerCase();
                     
                     btn.className = `process-btn ${isActive ? 'active' : ''}`;
-                    btn.textContent = proc;
+                    
+                    // Determine status mark
+                    let statusMark = '';
+                    const cachedResult = window.allResultsCache && window.allResultsCache[proc];
+                    
+                    // Choose colors based on active state (Active=Blue bg, Inactive=White bg)
+                    const successColor = isActive ? '#b3ffb3' : '#28a745';
+                    const failColor = isActive ? '#ffcccc' : '#dc3545';
+                    
+                    // Determine if found or not (using cache, or current data if fallback)
+                    let isNotFound = undefined;
+                    if (cachedResult) {
+                        isNotFound = cachedResult.notFound;
+                    } else if (isActive) {
+                        isNotFound = data.notFound;
+                    }
+                    
+                    if (isNotFound !== undefined) {
+                        if (isNotFound) {
+                             statusMark = ` <span style="font-weight: bold; color: ${failColor}; margin-left: 5px;">✘</span>`; 
+                        } else {
+                             statusMark = ` <span style="font-weight: bold; color: ${successColor}; margin-left: 5px;">✔</span>`;
+                        }
+                    }
+
+                    btn.innerHTML = `<span>${proc}</span>${statusMark}`;
                     btn.title = isActive ? 'Current Tab' : `Switch to ${proc}`;
                     
                     if (isActive) {
