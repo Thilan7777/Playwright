@@ -72,7 +72,7 @@ function calculatePathScore(path) {
         }
         
         // Check for numeric version patterns (e.g., "3.7", "2021", "v2.0")
-        if (/(.\\|\\_|\\/)(v?\d+\.\d+|v?\d{4})(.\\|\\_|\\|$)/i.test(path)) {
+        if (/(v?\d+\.\d+|v?\d{4})/i.test(path)) {
             return -10; // Likely versioned software folder
         }
         
