@@ -6,7 +6,7 @@
  */
 
 /**
- * Calculate path score based on location
+ * Calculate path score based on location with intelligent C:\Users\ handling
  * @param {string} path - File path
  * @returns {number} Path score
  */
@@ -14,37 +14,74 @@ function calculatePathScore(path) {
     const pathUpper = path.toUpperCase();
     let score = 0;
     
-    // Base location scoring
+    // ===== TIER 1: System Directories (Highest Trust) =====
     if (pathUpper.includes('C:\\WINDOWS\\SYSTEM32')) {
-        score = 50;
-    } else if (pathUpper.includes('C:\\PROGRAM FILES (X86)')) {
-        score = 35;
-    } else if (pathUpper.includes('C:\\PROGRAM FILES')) {
-        score = 40;
-    } else if (/^[D-Z]:\\/i.test(path)) {
-        score = 10;
+        return 50; // Trusted system location
     }
     
-    // Suspicious location penalties
-    if (pathUpper.includes('DESKTOP') || pathUpper.includes('DOCUMENTS')) {
-        score = -40;
-    }
-    if (pathUpper.includes('\\TEMP\\') || pathUpper.includes('\\TMP\\')) {
-        score -= 30;
-    }
-    if (pathUpper.includes('\\APPDATA\\')) {
-        score -= 15;
+    if (pathUpper.includes('C:\\PROGRAM FILES (X86)')) {
+        return 35; // Standard 32-bit program installation
     }
     
-    // Suspicious filename modifications
-    const filename = path.split('\\').pop() || '';
-    if (/dialer\s*\(\d+\)\.exe/i.test(filename) || 
-        /dialer[_-]copy\.exe/i.test(filename) ||
-        /dialer[_-]backup\.exe/i.test(filename)) {
-        score -= 20;
+    if (pathUpper.includes('C:\\PROGRAM FILES') && !pathUpper.includes('(X86)')) {
+        return 40; // Standard 64-bit program installation
     }
     
-    return score;
+    // ===== TIER 2: Other Drives =====
+    if (/^[D-Z]:\\/i.test(path)) {
+        return 10; // Other drives, neutral-positive
+    }
+    
+    // ===== TIER 3: C:\Users\ Directory (Granular Scoring) =====
+    if (pathUpper.includes('C:\\USERS\\')) {
+        
+        // HIGHEST SUSPICION: Temp folders
+        if (pathUpper.includes('\\APPDATA\\LOCAL\\TEMP\\') || 
+            pathUpper.includes('\\TEMP\\') || 
+            pathUpper.includes('\\TMP\\')) {
+            return -30; // Highly suspicious temporary location
+        }
+        
+        // HIGH SUSPICION: Common malware/suspicious locations
+        if (pathUpper.includes('\\DESKTOP\\') || 
+            pathUpper.includes('\\DOWNLOADS\\') || 
+            pathUpper.includes('\\DOCUMENTS\\')) {
+            return -20; // Moderate penalty for user profile locations
+        }
+        
+        // MODERATE TRUST: User-installed software
+        if (pathUpper.includes('\\APPDATA\\LOCAL\\PROGRAMS\\')) {
+            return -5; // Legitimate user-installed applications (Windows Store apps, portable installs)
+        }
+        
+        // LOW TRUST: Project/Development folders (legitimate but not system-level)
+        // Indicators: Project, Development, University, Version folders, numeric version patterns
+        const projectIndicators = [
+            '\\PROJECT',
+            '\\DEVELOPMENT',
+            '\\UNIVERSITY',
+            '\\VERSION',
+            '\\VERSIONS',
+            '\\BUILDS',
+            '\\SRC\\',  // Source code folder
+            '\\SOURCE\\'  // Source folder
+        ];
+        
+        if (projectIndicators.some(indicator => pathUpper.includes(indicator))) {
+            return -10; // Neutral-low trust for development/project files
+        }
+        
+        // Check for numeric version patterns (e.g., "3.7", "2021", "v2.0")
+        if (/(.\\|\\_|\\/)(v?\d+\.\d+|v?\d{4})(.\\|\\_|\\|$)/i.test(path)) {
+            return -10; // Likely versioned software folder
+        }
+        
+        // DEFAULT: All other C:\Users\ paths
+        return -10; // Neutral-low trust, not heavily suspicious but not system-level
+    }
+    
+    // ===== TIER 4: Everything Else =====
+    return 0; // Unknown location, neutral
 }
 
 /**

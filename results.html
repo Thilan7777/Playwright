@@ -447,6 +447,9 @@
         };
 
         function displayResults(data) {
+            // Update global resultsData to ensure analytics shows correct process
+            resultsData = data;
+            
             // Hide loading, show content
             document.getElementById('loadingMessage').style.display = 'none';
             document.getElementById('resultsContent').style.display = 'block';
