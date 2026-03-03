@@ -177,6 +177,28 @@
             color: #666;
         }
         
+        .copy-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #0066cc;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-left: 8px;
+            opacity: 0.7;
+        }
+        
+        .copy-btn:hover {
+            background: rgba(0, 102, 204, 0.1);
+            opacity: 1;
+        }
+        
+        .copy-btn.copied {
+            color: #28a745;
+        }
+        
         .score-breakdown {
             margin-top: 15px;
             padding-top: 15px;
@@ -699,6 +721,27 @@
             return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
         
+        function copyToClipboard(text, button) {
+            if (!text || text.trim() === '' || text === 'N/A') {
+                alert('Nothing to copy');
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '✓ Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+        
         function renderCandidate(candidate, containerClass = '') {
             const scoreClass = candidate.score > 0 ? 'positive' : candidate.score < 0 ? 'negative' : '';
             
@@ -723,7 +766,8 @@
                     </div>
                     <div class="field-row">
                         <div class="field-label">📁 Path:</div>
-                        <div class="field-value path-value">${escapeHtml(candidate.filePath || candidate.path || 'N/A')}</div>
+                        <div class="field-value path-value" data-copy="${(candidate.filePath || candidate.path || '').replace(/"/g, '&quot;')}">${escapeHtml(candidate.filePath || candidate.path || 'N/A')}</div>
+                        <button class="copy-btn" onclick="copyToClipboard(this.previousElementSibling.dataset.copy, this)" title="Copy path">📋 Copy</button>
                     </div>
                     <div class="field-row">
                         <div class="field-label">🏢 Vendor:</div>
@@ -731,7 +775,8 @@
                     </div>
                     <div class="field-row">
                         <div class="field-label">📦 Product:</div>
-                        <div class="field-value">${escapeHtml(candidate.productName || 'N/A')}</div>
+                        <div class="field-value" data-copy="${(candidate.productName || '').replace(/"/g, '&quot;')}">${escapeHtml(candidate.productName || 'N/A')}</div>
+                        <button class="copy-btn" onclick="copyToClipboard(this.previousElementSibling.dataset.copy, this)" title="Copy product name">📋 Copy</button>
                     </div>
                     <div class="field-row">
                         <div class="field-label">🔢 Version:</div>
