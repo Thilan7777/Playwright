@@ -1,0 +1,13 @@
+{
+  "spreadsheetId": "1M_DJYj5VtnO5cOrY9jl_le7UohfAYxJ14rVGcCuKHO8",
+  "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1M_DJYj5VtnO5cOrY9jl_le7UohfAYxJ14rVGcCuKHO8",
+  "sheetName": "Sheet1",
+  "columns": {
+    "filePath": "G",
+    "productName": "F"
+  },
+  "headers": {
+    "filePath": "File Path",
+    "productName": "Product Name"
+  }
+}

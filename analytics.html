@@ -388,6 +388,203 @@
             display: block;
             margin-bottom: 20px;
         }
+        
+        /* Settings Button */
+        .settings-btn {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .settings-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 15px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 22px;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.2s;
+        }
+        
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: monospace;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+            justify-content: flex-end;
+        }
+        
+        .btn-modal {
+            padding: 11px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .btn-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-reset {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-reset:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn-cancel {
+            background: #fff;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-cancel:hover {
+            background: #f5f5f5;
+        }
+        
+        .alert {
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
     </style>
 </head>
 <body>
@@ -398,8 +595,13 @@
         
         <div id="analyticsContent" style="display: none;">
             <div class="header">
-                <h1>📊 Search Results Analytics</h1>
-                <div class="subtitle">Intelligent ranking and classification of search candidates</div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h1>📊 Search Results Analytics</h1>
+                        <div class="subtitle">Intelligent ranking and classification of search candidates</div>
+                    </div>
+                    <button class="settings-btn" onclick="openSettingsModal()" title="Configure Google Sheets settings">⚙️ Settings</button>
+                </div>
             </div>
             
             <div class="stats-row">
@@ -457,6 +659,70 @@
             <div class="action-buttons">
                 <button class="btn btn-primary" onclick="window.print()">🖨️ Print Report</button>
                 <button class="btn btn-secondary" onclick="window.close()">← Back to Results</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Google Sheets Configuration</h2>
+                <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            
+            <div id="settingsAlert" class="alert" style="display: none;"></div>
+            
+            <form onsubmit="saveSettings(event)">
+                <div class="form-group">
+                    <label for="sheetUrl">Google Sheets URL</label>
+                    <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit">
+                    <div class="help-text">Paste your Google Sheet link here, or enter the ID below</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="sheetId">Spreadsheet ID (if not using URL)</label>
+                    <input type="text" id="sheetId" placeholder="1M_DJYj5VtnO5cOrY9jl_le7UohfAYxJ14rVGcCuKHO8">
+                    <div class="help-text">Found in the URL between /d/ and /edit</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="sheetName">Sheet Name</label>
+                    <input type="text" id="sheetName" placeholder="Sheet1" required>
+                    <div class="help-text">The name of the worksheet in your Google Sheet</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Column Mappings</label>
+                    <div class="form-row">
+                        <div>
+                            <label for="columnPath" style="font-size: 13px; font-weight: 500;">File Path Column</label>
+                            <input type="text" id="columnPath" placeholder="F" maxlength="3" required>
+                            <div class="help-text">e.g., F, AA, ABC</div>
+                        </div>
+                        <div>
+                            <label for="columnProduct" style="font-size: 13px; font-weight: 500;">Product Name Column</label>
+                            <input type="text" id="columnProduct" placeholder="G" maxlength="3" required>
+                            <div class="help-text">e.g., G, AB, ABD</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button type="button" class="btn-modal btn-reset" onclick="resetSettings()">🔄 Reset Defaults</button>
+                    <button type="button" class="btn-modal btn-cancel" onclick="closeSettingsModal()">Cancel</button>
+                    <button type="submit" class="btn-modal btn-save">💾 Save Settings</button>
+                </div>
+            </form>
+            
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+                <p><strong>💡 How to set up:</strong></p>
+                <ol style="margin: 5px 0; padding-left: 20px;">
+                    <li>Create a new Google Sheet or use an existing one</li>
+                    <li>Share it with your service account email from credentials.json</li>
+                    <li>Paste the sheet URL above</li>
+                    <li>Specify which columns to use for saving data</li>
+                </ol>
             </div>
         </div>
     </div>
@@ -1128,6 +1394,157 @@
                         <button class="btn btn-secondary" style="margin-top: 20px;" onclick="window.close()">← Back to Results</button>
                     </div>
                 `;
+            }
+        }
+        
+        // ============================================
+        // SETTINGS MODAL FUNCTIONS
+        // ============================================
+        
+        function openSettingsModal() {
+            console.log('Opening settings modal...');
+            loadSettingsForm();
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+        
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+        
+        async function loadSettingsForm() {
+            try {
+                console.log('Loading current settings...');
+                const response = await fetch('http://localhost:3000/config');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const config = data.config;
+                    document.getElementById('sheetId').value = config.spreadsheetId || '';
+                    document.getElementById('sheetUrl').value = config.spreadsheetUrl || '';
+                    document.getElementById('sheetName').value = config.sheetName || 'Sheet1';
+                    document.getElementById('columnPath').value = config.columns.filePath || 'F';
+                    document.getElementById('columnProduct').value = config.columns.productName || 'G';
+                    console.log('✅ Settings loaded');
+                } else {
+                    showAlert('Error loading settings: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+                showAlert('Failed to load settings. Is the server running?', 'error');
+            }
+        }
+        
+        async function saveSettings(e) {
+            e.preventDefault();
+            
+            const sheetId = document.getElementById('sheetId').value.trim();
+            const sheetUrl = document.getElementById('sheetUrl').value.trim();
+            const sheetName = document.getElementById('sheetName').value.trim();
+            const columnPath = document.getElementById('columnPath').value.trim().toUpperCase();
+            const columnProduct = document.getElementById('columnProduct').value.trim().toUpperCase();
+            
+            // Validation
+            if (!sheetId && !sheetUrl) {
+                showAlert('Please enter either a Sheet ID or a Google Sheets URL', 'error');
+                return;
+            }
+            
+            if (!sheetName) {
+                showAlert('Sheet name is required', 'error');
+                return;
+            }
+            
+            if (!columnPath || !/^[A-Z]+$/.test(columnPath)) {
+                showAlert('File Path column must be a valid column letter(s) (e.g., F, AA)', 'error');
+                return;
+            }
+            
+            if (!columnProduct || !/^[A-Z]+$/.test(columnProduct)) {
+                showAlert('Product Name column must be a valid column letter(s) (e.g., G, AB)', 'error');
+                return;
+            }
+            
+            // Prepare update object
+            const updates = {
+                sheetName,
+                columns: {
+                    filePath: columnPath,
+                    productName: columnProduct
+                }
+            };
+            
+            if (sheetId) {
+                updates.spreadsheetId = sheetId;
+            }
+            if (sheetUrl) {
+                updates.spreadsheetUrl = sheetUrl;
+            }
+            
+            try {
+                console.log('Saving settings...');
+                const response = await fetch('http://localhost:3000/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updates)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('✅ Settings saved successfully!', 'success');
+                    console.log('✅ Settings updated:', data.config);
+                    setTimeout(() => {
+                        closeSettingsModal();
+                    }, 1500);
+                } else {
+                    showAlert('Error: ' + (data.error || 'Failed to save settings'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to save settings:', error);
+                showAlert('Failed to save settings. Is the server running?', 'error');
+            }
+        }
+        
+        async function resetSettings() {
+            if (!confirm('Are you sure you want to reset all settings to defaults?')) {
+                return;
+            }
+            
+            try {
+                console.log('Resetting settings...');
+                const response = await fetch('http://localhost:3000/config/reset', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('✅ Settings reset to defaults!', 'success');
+                    loadSettingsForm();
+                    console.log('✅ Settings reset:', data.config);
+                } else {
+                    showAlert('Error: ' + (data.error || 'Failed to reset settings'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to reset settings:', error);
+                showAlert('Failed to reset settings. Is the server running?', 'error');
+            }
+        }
+        
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('settingsAlert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.style.display = 'block';
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('settingsModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
             }
         }
         
