@@ -199,6 +199,36 @@
             color: #28a745;
         }
         
+        .export-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-left: 8px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+        
+        .export-btn:hover {
+            opacity: 1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+        
+        .export-btn.loading {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .export-btn.success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
         .score-breakdown {
             margin-top: 15px;
             padding-top: 15px;
@@ -742,6 +772,142 @@
             });
         }
         
+        function exportToSheet(button) {
+            // Get the file path from the path div
+            // HTML structure: field-label -> field-value (with data-copy) -> copy-btn -> export-btn
+            const copyBtn = button.previousElementSibling;
+            const pathDiv = copyBtn.previousElementSibling;
+            const filePath = pathDiv.dataset.copy;
+            
+            console.log('📤 Export button clicked');
+            console.log('   Path div:', pathDiv);
+            console.log('   File path:', filePath);
+            
+            if (!filePath || filePath.trim() === '' || filePath === 'N/A') {
+                alert('No file path to export');
+                return;
+            }
+            
+            button.classList.add('loading');
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = '⏳ Exporting...';
+            
+            console.log('Sending to server:', filePath);
+            
+            // Call the backend endpoint to export to Google Sheets
+            fetch('http://localhost:3000/export-to-sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filePath: filePath
+                })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    button.textContent = '✅ Exported!';
+                    button.classList.remove('loading');
+                    button.classList.add('success');
+                    console.log('✅ Export successful:', filePath);
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('success');
+                        button.disabled = false;
+                    }, 3000);
+                } else {
+                    throw new Error(data.message || 'Export failed');
+                }
+            })
+            .catch(err => {
+                console.error('❌ Export error:', err);
+                button.textContent = '❌ Failed';
+                button.classList.remove('loading');
+                button.disabled = false;
+                
+                alert(`Export Error: ${err.message}\n\nMake sure:\n1. Server is running: node utils/export-server.js\n2. Google Sheet is shared with service account\n3. Check browser console for details`);
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 3000);
+            });
+        }
+        
+        function exportProductName(button) {
+            // Get the product name from the product div
+            // HTML structure: field-label -> field-value (with data-copy) -> copy-btn -> export-btn
+            const copyBtn = button.previousElementSibling;
+            const productDiv = copyBtn.previousElementSibling;
+            const productName = productDiv.dataset.copy;
+            
+            console.log('📤 Product export button clicked');
+            console.log('   Product div:', productDiv);
+            console.log('   Product name:', productName);
+            
+            if (!productName || productName.trim() === '' || productName === 'N/A') {
+                alert('No product name to export');
+                return;
+            }
+            
+            button.classList.add('loading');
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = '⏳ Exporting...';
+            
+            console.log('Sending to server:', productName);
+            
+            // Call the backend endpoint to export to Google Sheets
+            fetch('http://localhost:3000/export-to-sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    productName: productName
+                })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    button.textContent = '✅ Exported!';
+                    button.classList.remove('loading');
+                    button.classList.add('success');
+                    console.log('✅ Export successful:', productName);
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('success');
+                        button.disabled = false;
+                    }, 3000);
+                } else {
+                    throw new Error(data.message || 'Export failed');
+                }
+            })
+            .catch(err => {
+                console.error('❌ Export error:', err);
+                button.textContent = '❌ Failed';
+                button.classList.remove('loading');
+                button.disabled = false;
+                
+                alert(`Export Error: ${err.message}\n\nMake sure:\n1. Server is running: node utils/export-server.js\n2. Google Sheet is shared with service account\n3. Check browser console for details`);
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 3000);
+            });
+        }
+        
         function renderCandidate(candidate, containerClass = '') {
             const scoreClass = candidate.score > 0 ? 'positive' : candidate.score < 0 ? 'negative' : '';
             
@@ -768,6 +934,7 @@
                         <div class="field-label">📁 Path:</div>
                         <div class="field-value path-value" data-copy="${(candidate.filePath || candidate.path || '').replace(/"/g, '&quot;')}">${escapeHtml(candidate.filePath || candidate.path || 'N/A')}</div>
                         <button class="copy-btn" onclick="copyToClipboard(this.previousElementSibling.dataset.copy, this)" title="Copy path">📋 Copy</button>
+                        <button class="export-btn" onclick="exportToSheet(this)" title="Export to Google Sheet">📤 Export</button>
                     </div>
                     <div class="field-row">
                         <div class="field-label">🏢 Vendor:</div>
@@ -777,6 +944,7 @@
                         <div class="field-label">📦 Product:</div>
                         <div class="field-value" data-copy="${(candidate.productName || '').replace(/"/g, '&quot;')}">${escapeHtml(candidate.productName || 'N/A')}</div>
                         <button class="copy-btn" onclick="copyToClipboard(this.previousElementSibling.dataset.copy, this)" title="Copy product name">📋 Copy</button>
+                        <button class="export-btn" onclick="exportProductName(this)" title="Export to Google Sheet">📤 Export</button>
                     </div>
                     <div class="field-row">
                         <div class="field-label">🔢 Version:</div>

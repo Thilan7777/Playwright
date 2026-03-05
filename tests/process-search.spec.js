@@ -4,6 +4,7 @@ const HomePage = require('../pages/HomePage');
 const ProcessLibraryPage = require('../pages/ProcessLibraryPage');
 const ProcessDetailsPage = require('../pages/ProcessDetailsPage');
 const { parseProcessNames, runMultipleProcesses } = require('../utils/multi-process-runner');
+const { appendBestCandidatePath } = require('../utils/google-sheets-integration');
 
 test.describe('ProcessChecker Automation', () => {
   test('Search for user-entered process name', async ({ browser }) => {
