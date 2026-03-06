@@ -3,8 +3,8 @@
   "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1M_DJYj5VtnO5cOrY9jl_le7UohfAYxJ14rVGcCuKHO8",
   "sheetName": "Sheet1",
   "columns": {
-    "filePath": "G",
-    "productName": "F"
+    "filePath": "F",
+    "productName": "E"
   },
   "headers": {
     "filePath": "File Path",
