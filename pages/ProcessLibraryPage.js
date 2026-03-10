@@ -3,25 +3,59 @@ class ProcessLibraryPage {
     this.page = page;
   }
 
+  async findAndClickProcess(processName) {
+    // Optimized scanning using evaluate to avoid multiple round-trips
+    const foundIndex = await this.page.evaluate((targetName) => {
+      const links = Array.from(document.querySelectorAll('table tr td:nth-child(2) a'));
+      const normalizedTarget = targetName.trim().replace(/\s+/g, ' ').toLowerCase();
+      
+      for (let i = 0; i < links.length; i++) {
+        const normalizedLink = links[i].innerText.trim().replace(/\s+/g, ' ').toLowerCase();
+        if (normalizedLink === normalizedTarget) {
+          return i;
+        }
+      }
+      return -1;
+    }, processName);
+
+    if (foundIndex !== -1) {
+      console.log(`🎯 FOUND "${processName}" at index ${foundIndex}`);
+      // Use Playwright locator to click robustly
+      await Promise.all([
+        this.page.waitForLoadState('domcontentloaded'),
+        this.page.locator('table tr td:nth-child(2) a').nth(foundIndex).click()
+      ]);
+      return true;
+    }
+    return false;
+  }
+
   async selectLetter(letter) {
     // Click on the letter link (e.g., A, B, C, etc.)
     // The letters are links with URLs like file.php?start=S
     await this.page.locator(`a[href*="file.php?start=${letter.toUpperCase().trim()}"]`).click();
     
     // Wait for page to fully load
-    await this.page.waitForLoadState('load', { timeout: 10000 });
+    await this.page.waitForLoadState('domcontentloaded', { timeout: 8000 });
     
     // Wait for table to be visible
-    await this.page.waitForSelector('table', { timeout: 10000 });
+    await this.page.waitForSelector('table', { timeout: 8000 });
     
     // Wait for actual table content (process links) to appear
-    await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 10000 });
+    await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
     
     // Wait a bit for any loading overlays/dialogs to disappear
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForTimeout(200);
     
     // Store the base URL for this letter (for direct page navigation)
     this.baseUrl = this.page.url();
+    this.selectedLetter = letter.toUpperCase();
+    console.log(`🔤 Selected letter "${letter}" - URL: ${this.baseUrl}`);
+    
+    // Check if URL already has a page parameter
+    const urlObj = new URL(this.baseUrl);
+    const currentPageParam = urlObj.searchParams.get('page');
+    console.log(`📄 Current page parameter: ${currentPageParam || 'none (implies page 0 or 1)'}`);
   }
 
   async goToPage(pageNum) {
@@ -29,13 +63,13 @@ class ProcessLibraryPage {
     const url = `${this.baseUrl}&page=${pageNum}`;
     
     try {
-      await this.page.goto(url, { waitUntil: 'load', timeout: 10000 });
+      await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 8000 });
       
       // Wait for table to load
-      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 10000 });
+      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
       
       // Small delay to ensure page is fully rendered
-      await this.page.waitForTimeout(300);
+      await this.page.waitForTimeout(50);
       
       return true; // Page loaded successfully
     } catch (e) {
@@ -56,9 +90,10 @@ class ProcessLibraryPage {
     console.log('🚀 Using direct URL navigation (no clicking!)');
     console.log('━'.repeat(60));
     
-    let currentPage = 1;
+    // Start from page 0 since that's typically the first page after selecting a letter
+    let currentPage = 0;
     let blockSize = 8;
-    let lastValidPage = 1;
+    let lastValidPage = 0;
     let maxValidPage = null; // Upper bound when we overshoot
     const maxBlockSize = 128;
     const maxPages = 2000;
@@ -84,19 +119,23 @@ class ProcessLibraryPage {
         
         const pageLoaded = await this.goToPage(currentPage);
         if (!pageLoaded) {
+          // Even the midpoint doesn't exist, try next page after last valid
           currentPage = lastValidPage + 1;
-          await this.goToPage(currentPage);
+          const retryLoaded = await this.goToPage(currentPage);
+          if (!retryLoaded) {
+            throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+          }
         }
         continue;
       }
 
       console.log(`📍 Page ${currentPage}: [${pageRange.firstItem}] → [${pageRange.lastItem}] (block=${blockSize})`);
 
-      // Debug: If this is page 1009, log all items
-      if (currentPage === 1009) {
+      // Debug: If this is page 126 or 1009, log all items
+      if (currentPage === 126 || currentPage === 1009) {
         const processLinks = this.page.locator('table tr td:nth-child(2) a');
         const count = await processLinks.count();
-        console.log(`🔍 DEBUG Page 1009 - Total items: ${count}`);
+        console.log(`🔍 DEBUG Page ${currentPage} - Total items: ${count}`);
         for (let i = 0; i < Math.min(count, 10); i++) {
           const item = await processLinks.nth(i).innerText();
           console.log(`  [${i}] ${item}`);
@@ -109,9 +148,10 @@ class ProcessLibraryPage {
       }
 
       // Check if target shares prefix with first item - important for sorting edge cases
-      const targetPrefix = processName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 1);
-      const firstPrefix = pageRange.firstItem.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 1);
-      const sharesFirstPrefix = targetPrefix === firstPrefix;
+      // Use 3-character prefix for better precision
+      const targetPrefix3 = processName.trim().toLowerCase().substring(0, 3);
+      const firstPrefix3 = pageRange.firstItem.trim().toLowerCase().substring(0, 3);
+      const sharesFirstPrefix = targetPrefix3 === firstPrefix3 || (targetPrefix3.length >= 2 && firstPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === firstPrefix3.substring(0, 2));
       
       // Target is before this page - we overshot
       if (this.compareProcessNames(processName, pageRange.firstItem) < 0 && !sharesFirstPrefix) {
@@ -129,7 +169,45 @@ class ProcessLibraryPage {
         
         // Check if binary search range is exhausted
         if (lastValidPage >= maxValidPage) {
-          console.log(`🛑 Binary search exhausted (${lastValidPage} >= ${maxValidPage})`);
+          console.log(`⚠️  Binary search range collapsed (${lastValidPage} >= ${maxValidPage}) - scanning final pages`);
+          
+          // Before giving up, scan the boundary pages
+          const pagesToCheck = new Set([lastValidPage, maxValidPage, lastValidPage + 1]);
+          for (const pageNum of pagesToCheck) {
+            if (pageNum <= 0 || scannedPages.has(pageNum)) continue;
+            
+            console.log(`🔍 Final boundary check on page ${pageNum}`);
+            const scanLoaded = await this.goToPage(pageNum);
+            if (!scanLoaded) continue;
+            
+            scannedPages.add(pageNum);
+            
+            const processLinks = this.page.locator('table tr td:nth-child(2) a');
+            const linkCount = await processLinks.count();
+            
+            for (let i = 0; i < linkCount; i++) {
+              const linkText = await processLinks.nth(i).innerText();
+              const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
+              const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
+              
+              if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
+                console.log(`🎯 FOUND "${processName}" on page ${pageNum} (boundary check)`);
+                console.log('━'.repeat(60));
+                
+                // Store the found page info before navigating
+                this.foundOnPage = pageNum;
+                this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+                
+                await Promise.all([
+                  this.page.waitForLoadState('domcontentloaded', { timeout: 8000 }),
+                  processLinks.nth(i).click()
+                ]);
+                return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
+              }
+            }
+          }
+          
+          console.log(`🛑 Binary search exhausted after scanning ${Array.from(pagesToCheck).join(', ')}`);
           throw new Error(`${processName} not found - binary search exhausted`);
         }
         
@@ -139,19 +217,24 @@ class ProcessLibraryPage {
         const pageLoaded = await this.goToPage(currentPage);
         if (!pageLoaded) {
           currentPage = lastValidPage + 1;
-          await this.goToPage(currentPage);
+          const retryLoaded = await this.goToPage(currentPage);
+          if (!retryLoaded) {
+            throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+          }
         }
         continue;
       }
 
       // Target is within this page range - scan it
       // Also scan if target has same prefix as last item OR first item (safety check for sorting edge cases)
-      const lastPrefix = pageRange.lastItem.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 1);
+      const lastPrefix3 = pageRange.lastItem.trim().toLowerCase().substring(0, 3);
       const comparisonResult = this.compareProcessNames(processName, pageRange.lastItem);
-      const sharesLastPrefix = targetPrefix === lastPrefix;
+      const sharesLastPrefix = targetPrefix3 === lastPrefix3 || (targetPrefix3.length >= 2 && lastPrefix3.length >= 2 && targetPrefix3.substring(0, 2) === lastPrefix3.substring(0, 2));
+      // Always scan if in binary search mode (blockSize == 1) or if prefix matches or if target is in range
       const shouldScan = comparisonResult <= 0 || 
                          sharesLastPrefix ||
-                         sharesFirstPrefix;
+                         sharesFirstPrefix ||
+                         blockSize === 1;
       
       if (shouldScan) {
         // Check if we've already scanned this page
@@ -172,45 +255,19 @@ class ProcessLibraryPage {
         
         let scanReason = 'in-range';  // Track why we're scanning
         if (sharesFirstPrefix && this.compareProcessNames(processName, pageRange.firstItem) < 0) {
-          console.log(`✅ Target < firstItem but shares prefix "${targetPrefix}" - SCANNING page ${currentPage}`);
+          console.log(`✅ Target < firstItem but shares prefix "${targetPrefix3}" - SCANNING page ${currentPage}`);
           scanReason = 'prefix-before';
         } else if (sharesLastPrefix && comparisonResult > 0) {
-          console.log(`✅ Target > lastItem but shares prefix "${targetPrefix}" - SCANNING page ${currentPage}`);
+          console.log(`✅ Target > lastItem but shares prefix "${targetPrefix3}" - SCANNING page ${currentPage}`);
           scanReason = 'prefix-after';
         } else {
           console.log(`✅ Target in range - SCANNING page ${currentPage}`);
         }
         
-        const processLinks = this.page.locator('table tr td:nth-child(2) a');
-        const linkCount = await processLinks.count();
-        
-        for (let i = 0; i < linkCount; i++) {
-          const linkText = await processLinks.nth(i).innerText();
-          // Normalize spaces for comparison (handle cases like "notepad .exe" vs "notepad.exe")
-          const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
-          const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
-          
-          // Debug: show items around the target
-          const isNotepadRelated = normalizedSearch.toLowerCase().includes('notepad') || normalizedLink.toLowerCase().includes('notepad');
-          if (isNotepadRelated) {
-            const isCaseInsensitiveMatch = (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase());
-            const matchType = (normalizedLink === normalizedSearch) ? '✓ EXACT' : 
-                            isCaseInsensitiveMatch ? '≈ case-diff' : '○';
-            console.log(`  🔎 ${matchType}: "${linkText}" (normalized: "${normalizedLink}")`);
-          }
-          
-          // Match case-insensitively so users can enter any capitalization
-          if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
-            console.log(`🎯 FOUND "${processName}" (actual: "${linkText}") on page ${currentPage}`);
-            console.log(`📊 Total pages checked: ${currentPage} (exponential search with binary refinement)`);
-            console.log('━'.repeat(60));
-            
-            await Promise.all([
-              this.page.waitForLoadState('load', { timeout: 10000 }),
-              processLinks.nth(i).click()
-            ]);
-            return;
-          }
+        if (await this.findAndClickProcess(processName)) {
+            this.foundOnPage = currentPage;
+            this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+            return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
         }
         
         // Not found on this page
@@ -218,10 +275,17 @@ class ProcessLibraryPage {
         
         // Check if target is actually before this page's range
         const targetBeforeRange = this.compareProcessNames(processName, pageRange.firstItem) < 0;
-        console.log(`🔍 DEBUG: targetBeforeRange=${targetBeforeRange}, scanReason=${scanReason}, firstItem="${pageRange.firstItem}"`);
+        const targetAfterRange = this.compareProcessNames(processName, pageRange.lastItem) > 0;
+        console.log(`🔍 DEBUG: targetBeforeRange=${targetBeforeRange}, targetAfterRange=${targetAfterRange}, scanReason=${scanReason}`);
         
+        // If target is after the last item, continue forward
+        if (targetAfterRange) {
+          console.log(`⏭️  Target > lastItem "${pageRange.lastItem}" - continuing forward`);
+          lastValidPage = currentPage;
+          // Continue to forward jump logic below
+        }
         // If we scanned because target < firstItem but shared prefix, OR discovered target < firstItem after scanning
-        if (scanReason === 'prefix-before' || targetBeforeRange) {
+        else if (scanReason === 'prefix-before' || targetBeforeRange) {
           // If this is page 1, we can't go backward, so go forward instead
           if (currentPage === 1) {
             console.log(`⏭️  Page 1 scanned - continuing forward`);
@@ -237,7 +301,27 @@ class ProcessLibraryPage {
             
             // Check if binary search range exists
             if (lastValidPage >= maxValidPage) {
-              console.log(`🛑 Binary search exhausted (${lastValidPage} >= ${maxValidPage})`);
+              console.log(`⚠️  Binary search range collapsed (${lastValidPage} >= ${maxValidPage}) - scanning boundary pages`);
+              
+              // Scan the boundary pages before giving up
+              const pagesToCheck = new Set([lastValidPage, maxValidPage, currentPage]);
+              for (const pageNum of pagesToCheck) {
+                if (pageNum <= 0 || scannedPages.has(pageNum)) continue;
+                
+                console.log(`🔍 Backward boundary check on page ${pageNum}`);
+                const scanLoaded = await this.goToPage(pageNum);
+                if (!scanLoaded) continue;
+                
+                scannedPages.add(pageNum);
+                
+                if (await this.findAndClickProcess(processName)) {
+                  this.foundOnPage = pageNum;
+                  this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+                  return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
+                }
+              }
+              
+              console.log(`🛑 Binary search exhausted after scanning backward boundaries`);
               throw new Error(`${processName} not found - binary search exhausted`);
             }
             
@@ -246,21 +330,35 @@ class ProcessLibraryPage {
             const pageLoaded = await this.goToPage(currentPage);
             if (!pageLoaded) {
               currentPage = lastValidPage + 1;
-              await this.goToPage(currentPage);
+              const retryLoaded = await this.goToPage(currentPage);
+              if (!retryLoaded) {
+                throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+              }
             }
             continue;
           }
         } else if (scanReason === 'in-range' && currentPage - lastValidPage > 1) {
           // We scanned this page expecting to find the target, but didn't
           // If there's a gap between lastValidPage and currentPage, search it
-          console.log(`⚠️  Expected to find target on page ${currentPage}, but didn't - checking gap`);
+          const gapSize = currentPage - lastValidPage - 1;
+          console.log(`⚠️  Expected to find target on page ${currentPage}, but didn't - checking gap of ${gapSize} pages`);
           maxValidPage = currentPage - 1;
-          currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+          
+          // If gap is small (<= 20 pages), scan sequentially from lastValidPage+1
+          if (gapSize <= 20) {
+            console.log(`📖 Small gap detected - sequential scan from page ${lastValidPage + 1}`);
+            currentPage = lastValidPage + 1;
+          } else {
+            currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+          }
           blockSize = 1;
           const pageLoaded = await this.goToPage(currentPage);
           if (!pageLoaded) {
             currentPage = lastValidPage + 1;
-            await this.goToPage(currentPage);
+            const retryLoaded = await this.goToPage(currentPage);
+            if (!retryLoaded) {
+              throw new Error(`${processName} not found - no valid pages after ${lastValidPage}`);
+            }
           }
           continue;
         } else {
@@ -276,26 +374,10 @@ class ProcessLibraryPage {
         // Scan it even if target appears to be after last item
         console.log(`🔍 Last page detected (${pageRange.count} items) - scanning anyway`);
         
-        const processLinks = this.page.locator('table tr td:nth-child(2) a');
-        const linkCount = await processLinks.count();
-        
-        for (let i = 0; i < linkCount; i++) {
-          const linkText = await processLinks.nth(i).innerText();
-          // Normalize spaces for comparison
-          const normalizedLink = linkText.trim().replace(/\s+/g, ' ');
-          const normalizedSearch = processName.trim().replace(/\s+/g, ' ');
-          
-          if (normalizedLink.toLowerCase() === normalizedSearch.toLowerCase()) {
-            console.log(`🎯 FOUND "${processName}" on page ${currentPage} (last page)`);
-            console.log(`📊 Total pages checked: ${currentPage}`);
-            console.log('━'.repeat(60));
-            
-            await Promise.all([
-              this.page.waitForLoadState('load', { timeout: 10000 }),
-              processLinks.nth(i).click()
-            ]);
-            return;
-          }
+        if (await this.findAndClickProcess(processName)) {
+           this.foundOnPage = currentPage;
+           this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+           return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
         }
         
         // Not found even on last page
@@ -309,7 +391,14 @@ class ProcessLibraryPage {
       // If we have an upper bound, do binary search
       if (maxValidPage !== null) {
         console.log(`⏭️  Binary search: target > "${pageRange.lastItem}" - searching between ${lastValidPage} and ${maxValidPage}`);
-        currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+        
+        // If the gap is small (<=20 pages), scan sequentially instead of binary search
+        if (maxValidPage - lastValidPage <= 20) {
+          console.log(`📖 Gap is small (${maxValidPage - lastValidPage} pages) - sequential scan`);
+          currentPage = lastValidPage + 1;
+        } else {
+          currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+        }
         blockSize = 1;
       } else {
         console.log(`⏭️  Target "${processName}" > "${pageRange.lastItem}" - jumping ${blockSize} pages`);
@@ -321,20 +410,86 @@ class ProcessLibraryPage {
       
       if (!pageLoaded) {
         // Page doesn't exist - we've gone past the last page
-        // Update upper bound to try lower page
-        console.log(`⬅️  Page ${currentPage} doesn't exist - updating upper bound`);
-        maxValidPage = currentPage - 1;
-        
-        // Check if binary search range is exhausted
-        if (lastValidPage >= maxValidPage) {
-          console.log(`🛑 Binary search exhausted (${lastValidPage} >= ${maxValidPage})`);
+        // Use smart binary search: jump back quickly, only scan when needed
+        console.log(`⬅️  Page ${currentPage} doesn't exist - fast backward search from ${lastValidPage}`);
+
+        if (maxValidPage === null || currentPage - 1 < maxValidPage) {
+          maxValidPage = currentPage - 1;
+        }
+
+        if (maxValidPage <= lastValidPage) {
+          console.log(`🛑 Search exhausted (${lastValidPage} >= ${maxValidPage})`);
           throw new Error(`${processName} not found - reached end of available pages`);
         }
+
+        // Binary search with smart scanning
+        while (lastValidPage < maxValidPage) {
+          currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
+          if (currentPage === lastValidPage) {
+            currentPage = lastValidPage + 1;
+          }
+          
+          const midLoaded = await this.goToPage(currentPage);
+          if (!midLoaded) {
+            // Page doesn't exist, move left
+            maxValidPage = currentPage - 1;
+            continue;
+          }
+          
+          const midRange = await this.getPageRange();
+          if (!midRange.firstItem) {
+            maxValidPage = currentPage - 1;
+            continue;
+          }
+          
+          const compFirst = this.compareProcessNames(processName, midRange.firstItem);
+          const compLast = this.compareProcessNames(processName, midRange.lastItem);
+          
+          console.log(`🔍 Binary check page ${currentPage}: [${midRange.firstItem}] → [${midRange.lastItem}]`);
+          
+          // Always scan the page to avoid missing targets
+          if (await this.findAndClickProcess(processName)) {
+            return; // Found and clicked
+          }
+          
+          // Not found, use comparison to narrow range
+          if (compLast < 0) {
+            // Target is before this page
+            maxValidPage = currentPage - 1;
+          } else {
+            // Target is after this page
+            lastValidPage = currentPage;
+          }
+        }
         
-        currentPage = Math.floor((lastValidPage + maxValidPage) / 2);
-        blockSize = 1;
-        await this.goToPage(currentPage);
-        continue;
+        // Binary search converged - scan the final pages to confirm
+        console.log(`📍 Binary search converged at page ${lastValidPage}-${maxValidPage}`);
+        
+        const pagesToScan = [lastValidPage, lastValidPage + 1, maxValidPage];
+        for (const pageNum of pagesToScan) {
+          if (pageNum <= 0 || pageNum > lastValidPage + 10) continue;
+          
+          console.log(`🔎 Final check on page ${pageNum}`);
+          const scanLoaded = await this.goToPage(pageNum);
+          if (!scanLoaded) continue;
+          
+          const scanRange = await this.getPageRange();
+          if (!scanRange.firstItem) continue;
+          
+          if (await this.findAndClickProcess(processName)) {
+            this.foundOnPage = pageNum;
+            this.foundWithLetter = this.selectedLetter || processName[0].toUpperCase();
+            return { foundOnPage: this.foundOnPage, letter: this.foundWithLetter };
+          }
+        }
+        
+        console.log(`� Process not found in binary search range [${lastValidPage}-${maxValidPage}]`);
+        console.log(`📍 Resuming exponential search from page ${maxValidPage}`);
+        
+        // Resume exponential search from maxValidPage
+        currentPage = maxValidPage;
+        maxValidPage = null; // Reset upper bound
+        continue; // Continue the main loop
       }
       
       // Increase block size exponentially (with cap) only if no upper bound
@@ -353,18 +508,15 @@ class ProcessLibraryPage {
     
     // Wait for table content to be available
     try {
-      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
+      await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 5000 });
     } catch (e) {
-      // Debug: capture what's actually on the page
-      const pageContent = await this.page.content();
-      console.error('❌ Failed to find table content. Page HTML length:', pageContent.length);
+      console.error('❌ Failed to find table content. Retrying...');
       
-      // Retry once after waiting longer
-      console.log('⏳ Retrying after 2 seconds...');
-      await this.page.waitForTimeout(2000);
+      // Retry once after a short wait
+      await this.page.waitForTimeout(500);
       
       try {
-        await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 8000 });
+        await this.page.waitForSelector('table tr td:nth-child(2) a', { timeout: 5000 });
       } catch (e2) {
         // Still failed - return null
         return { firstItem: null, lastItem: null };
@@ -403,25 +555,13 @@ class ProcessLibraryPage {
   }
 
   compareProcessNames(target, reference) {
-    // Custom comparison to match website's sorting:
-    // - Strips special characters first
-    // - Case-insensitive comparison
-    // Simple and reliable
+    // Match the website's sorting: case-insensitive, direct string comparison
+    // DO NOT strip special characters for navigation comparison
+    const targetLower = target.trim().toLowerCase();
+    const referenceLower = reference.trim().toLowerCase();
     
-    const stripSpecial = (str) => str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    
-    const strippedTarget = stripSpecial(target);
-    const strippedReference = stripSpecial(reference);
-    
-    // Debug logging for troubleshooting
-    if (target.includes('googleearth') && reference.includes('google')) {
-      console.log(`🔍 COMPARE DEBUG: "${target}" vs "${reference}"`);
-      console.log(`   Stripped: "${strippedTarget}" vs "${strippedReference}"`);
-      console.log(`   Result: ${strippedTarget < strippedReference ? -1 : strippedTarget > strippedReference ? 1 : 0}`);
-    }
-    
-    if (strippedTarget < strippedReference) return -1;
-    if (strippedTarget > strippedReference) return 1;
+    if (targetLower < referenceLower) return -1;
+    if (targetLower > referenceLower) return 1;
     return 0;
   }
 }

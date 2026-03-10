@@ -1,0 +1,42 @@
+# Sensitive credentials (DO NOT COMMIT)
+credentials.json
+.env
+.env.local
+.env.*.local
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Test outputs
+test-results/
+test-output.txt
+*.log
+search-log.txt
+jre-test.txt
+
+# Playwright
+.playwright/
+test-results/
+
+# IDE and OS
+.vscode/settings.json
+.DS_Store
+Thumbs.db
+*.code-workspace
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+.backup
+
+# Build outputs
+dist/
+build/
+
+# Analytics and results (can be regenerated)
+analytics.html.backup
+verify-analytics.html

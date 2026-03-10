@@ -10,18 +10,24 @@
             padding: 0;
             box-sizing: border-box;
         }
+        html {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f0f0;
-            padding: 20px;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white;
         }
         .window {
+            width: 100%;
             background: white;
-            max-width: 1400px;
-            margin: 0 auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            overflow: hidden;
+            border-radius: 0;
+            box-shadow: none;
         }
         .title-bar {
             background: #0078d4;
@@ -45,6 +51,25 @@
         .content {
             padding: 30px;
         }
+        @media (max-width: 900px) {
+            .content {
+                padding: 18px;
+            }
+        }
+        @media (max-width: 600px) {
+            .content {
+                padding: 12px;
+            }
+            .summary-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .window {
+                border-radius: 0;
+                box-shadow: none;
+            }
+        }
         .summary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -52,9 +77,37 @@
             border-radius: 8px;
             margin-bottom: 25px;
         }
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
         .summary h2 {
             font-size: 24px;
-            margin-bottom: 10px;
+            margin: 0;
+        }
+        .new-search-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid white;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .new-search-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .new-search-btn:active {
+            transform: translateY(0);
         }
         .summary-info {
             display: flex;
@@ -140,7 +193,6 @@
             color: #666;
         }
         .path-cell {
-            max-width: 350px;
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
             color: #0066cc;
@@ -149,7 +201,6 @@
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 11px;
             color: #666;
-            max-width: 250px;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -225,6 +276,50 @@
             display: block;
             margin-bottom: 20px;
         }
+        /* New Process Navigation Styles */
+        .process-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #eef2f5;
+            border-radius: 6px;
+            border: 1px solid #dce1e6;
+        }
+        .process-nav-label {
+            width: 100%;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+        .process-btn {
+            background: white;
+            border: 1px solid #ccc;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #333;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .process-btn:hover {
+            background: #f0f0f0;
+            border-color: #999;
+        }
+        .process-btn.active {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+            font-weight: 600;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
@@ -240,9 +335,17 @@
                 <div>Loading results...</div>
             </div>
             
+            <div id="processNavContainer" class="process-nav" style="display: none;">
+                <div class="process-nav-label">🔎 Currently viewing process results. Switch to:</div>
+                <!-- Buttons will be injected here -->
+            </div>
+            
             <div id="resultsContent" style="display: none;">
                 <div class="summary">
-                    <h2 id="processTitle">🔍 Results for: <span id="processName"></span></h2>
+                    <div class="summary-header">
+                        <h2 id="processTitle">🔍 Results for: <span id="processName"></span></h2>
+                        <button class="new-search-btn" onclick="newSearch()">🔄 New Search</button>
+                    </div>
                     <div class="summary-info">
                         <div class="summary-item">
                             <strong>📦 Total Results:</strong>
@@ -252,12 +355,20 @@
                             <strong>🕒 Search Time:</strong>
                             <span id="searchTime">-</span>
                         </div>
+                        <div class="summary-item">
+                            <strong>📄 Found on Page:</strong>
+                            <span id="foundOnPage">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <strong>🔤 Letter:</strong>
+                            <span id="foundLetter">-</span>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="results-header">
                     <div class="results-title">📋 File Path Details</div>
-                    <button class="export-btn" onclick="exportToCSV()">💾 Export to CSV</button>
+                    <button class="export-btn" onclick="openAnalytics()">📊 View Analytics</button>
                 </div>
                 
                 <div class="table-container">
@@ -290,23 +401,186 @@
 
     <script>
         let resultsData = null;
+        // Cache to store results for all processes
+        window.allResultsCache = {};
 
         // Function called by Playwright to load results
         window.loadResults = (data) => {
             resultsData = data;
+            
+            // Add self to cache
+            if (data.processName) {
+                window.allResultsCache[data.processName] = data;
+            }
+            
             displayResults(data);
         };
 
+        // Function called by Playwright after all searches complete
+        window.updateAllResults = (allResultsList) => {
+            console.log('Received full results update', allResultsList);
+            allResultsList.forEach(item => {
+                if (item && item.processName) {
+                    window.allResultsCache[item.processName] = item;
+                    
+                    // Also ensure allProcessNames is populated in the item if missing
+                    if (!item.allProcessNames) {
+                        item.allProcessNames = allResultsList.map(r => r.processName);
+                    }
+                }
+            });
+            
+            // Re-render buttons if we have more data now
+            // But don't switch the current view, just refresh buttons
+            if (resultsData) {
+                // Ensure current view has the full list of names now
+                resultsData.allProcessNames = allResultsList.map(r => r.processName);
+                displayResults(resultsData);
+            }
+            
+            // Visual notification
+            const navLabel = document.querySelector('.process-nav-label');
+            if (navLabel) {
+                 navLabel.textContent = '✅ All searches completed. Switch to other process results:';
+                 navLabel.style.color = '#28a745';
+            }
+        };
+
         function displayResults(data) {
+            // Update global resultsData to ensure analytics shows correct process
+            resultsData = data;
+            
             // Hide loading, show content
             document.getElementById('loadingMessage').style.display = 'none';
             document.getElementById('resultsContent').style.display = 'block';
             
+            // Update page title to show process name
+            document.title = data.processName;
+            
             // Update summary
             document.getElementById('processName').textContent = data.processName;
-            document.getElementById('totalCount').textContent = data.data.length;
             document.getElementById('searchTime').textContent = data.searchTime || '-';
+            document.getElementById('foundOnPage').textContent = data.foundOnPage !== null && data.foundOnPage !== undefined ? data.foundOnPage : '-';
+            document.getElementById('foundLetter').textContent = data.letter || '-';
             document.getElementById('timestamp').textContent = new Date().toLocaleString();
+
+            // Render Process Navigation buttons
+            if (data.allProcessNames && data.allProcessNames.length > 1) {
+                const navContainer = document.getElementById('processNavContainer');
+                navContainer.style.display = 'flex';
+                
+                // Clear existing buttons and add label
+                navContainer.innerHTML = '';
+                
+                const label = document.createElement('div');
+                label.className = 'process-nav-label';
+                label.textContent = '🔍 Switch to other process results:';
+                navContainer.appendChild(label);
+                
+                data.allProcessNames.forEach(proc => {
+                    const btn = document.createElement('button');
+                    const isActive = proc.toLowerCase() === data.processName.toLowerCase();
+                    
+                    btn.className = `process-btn ${isActive ? 'active' : ''}`;
+                    
+                    // Determine status mark
+                    let statusMark = '';
+                    const cachedResult = window.allResultsCache && window.allResultsCache[proc];
+                    
+                    // Choose colors based on active state (Active=Blue bg, Inactive=White bg)
+                    const successColor = isActive ? '#b3ffb3' : '#28a745';
+                    const failColor = isActive ? '#ffcccc' : '#dc3545';
+                    
+                    // Determine if found or not (using cache, or current data if fallback)
+                    let isNotFound = undefined;
+                    if (cachedResult) {
+                        isNotFound = cachedResult.notFound;
+                    } else if (isActive) {
+                        isNotFound = data.notFound;
+                    }
+                    
+                    if (isNotFound !== undefined) {
+                        if (isNotFound) {
+                             statusMark = ` <span style="font-weight: bold; color: ${failColor}; margin-left: 5px;">✘</span>`; 
+                        } else {
+                             statusMark = ` <span style="font-weight: bold; color: ${successColor}; margin-left: 5px;">✔</span>`;
+                        }
+                    }
+
+                    btn.innerHTML = `<span>${proc}</span>${statusMark}`;
+                    btn.title = isActive ? 'Current Tab' : `Switch to ${proc}`;
+                    
+                    if (isActive) {
+                        btn.disabled = true;
+                    } else {
+                        btn.onclick = () => {
+                            // Check if we have the data in cache
+                            const cached = window.allResultsCache[proc];
+                            
+                            if (cached) {
+                                // We have the data! render it immediately
+                                console.log(`Switching view to ${proc}`);
+                                displayResults(cached);
+                                
+                                // Update URL hash for better browser history/feel
+                                window.location.hash = proc;
+                            } else {
+                                // Data not valid or not loaded yet
+                                alert(`Results for "${proc}" are not fully loaded in this tab yet.\n\nPlease wait for all searches to complete.`);
+                            }
+                        };
+                    }
+                    navContainer.appendChild(btn);
+                });
+            } else {
+                document.getElementById('processNavContainer').style.display = 'none';
+            }
+            
+            // Check if process was not found
+            if (data.notFound) {
+                document.getElementById('totalCount').textContent = '0';
+                document.getElementById('foundOnPage').textContent = '-';
+                document.getElementById('foundLetter').textContent = '-';
+                document.querySelector('.results-header').style.display = 'none';
+                document.querySelector('.table-container').style.display = 'none';
+                document.querySelector('.actions .secondary').style.display = 'none';
+                
+                // Add a not found message
+                const tableContainer = document.querySelector('.table-container');
+                if (tableContainer.nextElementSibling && tableContainer.nextElementSibling.classList.contains('not-found-message')) {
+                    // Already exists
+                } else {
+                    const notFoundDiv = document.createElement('div');
+                    notFoundDiv.className = 'not-found-message';
+                    notFoundDiv.innerHTML = `
+                        <div style="text-align: center; padding: 60px; color: #666;">
+                            <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+                            <h3 style="font-size: 24px; margin-bottom: 10px; color: #333;">Process Not Found</h3>
+                            <p style="font-size: 16px; margin-bottom: 20px;">
+                                The process "<strong>${data.processName}</strong>" was not found in the ProcessChecker database.
+                            </p>
+                            <p style="font-size: 14px; color: #888;">
+                                Please verify the process name and try again.<br>
+                                Note: Process names are case-insensitive but must be exact matches.
+                            </p>
+                        </div>
+                    `;
+                    tableContainer.parentNode.insertBefore(notFoundDiv, tableContainer.nextSibling);
+                }
+                return;
+            }
+            
+            // Normal results display
+            document.getElementById('totalCount').textContent = data.data.length;
+            document.querySelector('.results-header').style.display = 'flex';
+            document.querySelector('.table-container').style.display = 'block';
+            document.querySelector('.actions .secondary').style.display = 'inline-flex';
+            
+            // Remove not found message if it exists
+            const notFoundMsg = document.querySelector('.not-found-message');
+            if (notFoundMsg) {
+                notFoundMsg.remove();
+            }
             
             // Build table rows
             const tbody = document.getElementById('tableBody');
@@ -349,6 +623,50 @@
             });
         }
 
+        function openAnalytics() {
+            console.log('openAnalytics() called');
+            console.log('resultsData:', resultsData);
+            
+            if (!resultsData) {
+                alert('No data available for analytics');
+                return;
+            }
+            
+            // Check if we have valid data
+            if (!resultsData.data || resultsData.data.length === 0) {
+                alert('No search results to analyze');
+                return;
+            }
+            
+            console.log('Data validation passed. Total candidates:', resultsData.data.length);
+            
+            // Store data in localStorage for the analytics page to access
+            try {
+                const dataToStore = JSON.stringify(resultsData);
+                console.log('Storing data in localStorage, size:', dataToStore.length, 'bytes');
+                localStorage.setItem('analyticsData', dataToStore);
+                console.log('Data stored successfully');
+                
+                // Verify storage
+                const retrieved = localStorage.getItem('analyticsData');
+                console.log('Verification: Data retrieved from localStorage:', retrieved ? 'Success' : 'Failed');
+                
+                // Open analytics page in a new tab
+                console.log('Opening analytics window...');
+                const analyticsWindow = window.open('analytics.html', '_blank');
+                
+                if (!analyticsWindow) {
+                    alert('Failed to open analytics window. Please allow pop-ups for this site.');
+                } else {
+                    console.log('Analytics window opened successfully');
+                }
+            } catch (error) {
+                console.error('Error opening analytics:', error);
+                console.error('Stack trace:', error.stack);
+                alert('Error opening analytics: ' + error.message);
+            }
+        }
+        
         function exportToCSV() {
             if (!resultsData) return;
             
@@ -389,13 +707,12 @@
         }
 
         function newSearch() {
-            // Get the path to input-form.html
-            const currentPath = window.location.pathname;
-            const directoryPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-            const inputFormPath = directoryPath + '/input-form.html';
+            // Get the current URL and replace results.html with input-form.html
+            const currentUrl = window.location.href;
+            const inputFormUrl = currentUrl.replace('results.html', 'input-form.html');
             
-            // Navigate to input form
-            window.location.href = inputFormPath;
+            // Navigate to input form (this will convert the current tab to an input form)
+            window.location.href = inputFormUrl;
         }
     </script>
 </body>

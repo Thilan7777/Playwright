@@ -34,56 +34,52 @@ class ProcessDetailsPage {
   }
 
   async getAllFilePathsData() {
-    // Wait for the page to load (faster load state)
-    await this.page.waitForLoadState('load');
+    // Wait for the page to load (use domcontentloaded for faster response)
+    await this.page.waitForLoadState('domcontentloaded');
     
     // Wait for table to be visible with shorter timeout
-    await this.page.waitForSelector('table', { state: 'visible', timeout: 3000 });
+    await this.page.waitForSelector('table', { state: 'visible', timeout: 2000 });
     
-    // Get all data rows (all tr elements inside tbody, or all rows except header)
-    // First, let's find all rows in the table
-    const allRows = this.page.locator('table tr');
-    const totalRows = await allRows.count();
-    
-    console.log(`📊 Total rows found in table: ${totalRows}`);
-    
-    const allData = [];
-    
-    // Skip the first row (header) and process all data rows
-    for (let i = 1; i < totalRows; i++) {
-      const row = allRows.nth(i);
+    // Extract all data in a single browser-side operation (MUCH faster)
+    const allData = await this.page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr'));
+      const dataRows = [];
       
-      // Check if this row has enough columns (should have at least 7 td elements)
-      const cells = row.locator('td');
-      const cellCount = await cells.count();
-      
-      if (cellCount >= 7) {
-        // Extract all columns
-        const rowNum = await cells.nth(0).innerText().catch(() => '');
-        const path = await cells.nth(1).innerText().catch(() => '');
-        const productName = await cells.nth(2).innerText().catch(() => '');
-        const vendor = await cells.nth(3).innerText().catch(() => '');
-        const version = await cells.nth(4).innerText().catch(() => '');
-        const size = await cells.nth(5).innerText().catch(() => '');
-        const md5 = await cells.nth(6).innerText().catch(() => '');
+      // Skip header row (first row)
+      for (let i = 1; i < rows.length; i++) {
+        const cells = rows[i].querySelectorAll('td');
         
-        // Only add rows that have actual path data
-        if (path.trim()) {
-          allData.push({
-            rowNum: rowNum.trim(),
-            path: path.trim(),
-            productName: productName.trim(),
-            vendor: vendor.trim(),
-            version: version.trim(),
-            size: size.trim(),
-            md5: md5.trim()
-          });
-          console.log(`  ✓ Row ${allData.length}: ${path.trim()}`);
+        if (cells.length >= 7) {
+          const path = cells[1].innerText.trim();
+          
+          // Only add rows that have actual path data
+          if (path) {
+            dataRows.push({
+              rowNum: cells[0].innerText.trim(),
+              path: path,
+              productName: cells[2].innerText.trim(),
+              vendor: cells[3].innerText.trim(),
+              version: cells[4].innerText.trim(),
+              size: cells[5].innerText.trim(),
+              md5: cells[6].innerText.trim()
+            });
+          }
         }
       }
-    }
+      
+      return dataRows;
+    });
     
+    console.log(`📊 Total rows found in table: ${allData.length + 1} (including header)`);
     console.log(`📦 Total data rows extracted: ${allData.length}\n`);
+    
+    // Log first few and last few rows for verification
+    if (allData.length > 0) {
+      console.log(`  ✓ First row: ${allData[0].path}`);
+      if (allData.length > 1) {
+        console.log(`  ✓ Last row: ${allData[allData.length - 1].path}`);
+      }
+    }
     
     return allData;
   }

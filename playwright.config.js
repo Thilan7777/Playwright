@@ -6,9 +6,12 @@ module.exports = defineConfig({
   timeout: 300000, // 5 minutes timeout for deep pagination (up to 1000 pages)
   use: {
     headless: false,
-    viewport: { width: 1280, height: 800 },
+    viewport: null, // Use full browser window size instead of fixed viewport
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    video: 'retain-on-failure',
+    launchOptions: {
+      args: ['--start-maximized'] // Launch browser maximized
+    }
     // actionTimeout removed to allow infinite waits for user input
   },
 });
